@@ -5,6 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const schematicController = require('../controllers/schematicController');
 const { validateToken, isAdmin, optionalAuth } = require('../middleware/auth');
+const { downloadLimiter } = require('../middleware/rateLimit');
 
 // 确保上传目录存在
 const uploadDir = path.join(__dirname, '../uploads');
@@ -74,7 +75,7 @@ router.get('/:id/side-view', optionalAuth, schematicController.getSideView);
 router.get('/:id/top-view', optionalAuth, schematicController.getTopView);
 // 获取原理图所需材料清单
 router.get('/:id/materials', optionalAuth, schematicController.getMaterials);
-// 下载原理图文件
-router.get('/:id/download', optionalAuth, schematicController.downloadSchematic);
+// 下载原理图文件（限流：5次/分钟）
+router.get('/:id/download', downloadLimiter, optionalAuth, schematicController.downloadSchematic);
 
 module.exports = router; 
