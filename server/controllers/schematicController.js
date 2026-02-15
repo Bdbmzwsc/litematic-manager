@@ -514,6 +514,17 @@ async function checkAccessAndServeFile(req, res, fieldName) {
 
         // Download headers for file_path
         if (fieldName === 'file_path' && req.path.includes('/download')) {
+            // 增加下载计数
+            try {
+                await pool.execute(
+                    'UPDATE schematics SET download_count = COALESCE(download_count, 0) + 1 WHERE id = ?',
+                    [id]
+                );
+            } catch (countErr) {
+                console.error('更新下载计数失败:', countErr);
+                // 不阻断下载流程
+            }
+
             const filename = schematic.name + '.litematic';
             const containsNonAscii = /[^\x00-\x7F]/.test(filename);
             const encodedFilename = containsNonAscii
