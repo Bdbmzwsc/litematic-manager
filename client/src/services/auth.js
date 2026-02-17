@@ -4,11 +4,12 @@ const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
 const AUTH_URL = `${API_URL}/auth`;
 
 const authService = {
-    async register(username, password, email) {
+    async register(username, password, email, invitationCode) {
         const response = await axios.post(`${AUTH_URL}/register`, {
             username,
             password,
-            email
+            email,
+            invitationCode
         });
         return response.data;
     },
@@ -35,15 +36,15 @@ const authService = {
         try {
             const userStr = localStorage.getItem('user');
             if (!userStr) return null;
-            
+
             const user = JSON.parse(userStr);
-            
+
             if (!user || !user.id || !user.username) {
                 console.warn('无效的用户数据，清除localStorage');
                 localStorage.removeItem('user');
                 return null;
             }
-            
+
             return user;
         } catch (error) {
             console.error('解析用户数据失败:', error);

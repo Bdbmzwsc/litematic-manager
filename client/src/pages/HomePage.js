@@ -4,9 +4,11 @@ import FileUploader from '../components/FileUploader';
 import SearchBar from '../components/SearchBar';
 import SchematicList from '../components/SchematicList';
 import UserInfo from '../components/UserInfo';
+import InvitationManager from '../components/InvitationManager';
 import { searchSchematics, deleteSchematic, updateSchematic } from '../services/api';
 import authService from '../services/auth';
 import VpnKeyIcon from '@mui/icons-material/VpnKey';
+import CardGiftcardIcon from '@mui/icons-material/CardGiftcard';
 
 const HomePage = ({ user: propUser, isGuestMode, onExitGuestMode }) => {
     const [schematics, setSchematics] = useState([]);
@@ -18,6 +20,7 @@ const HomePage = ({ user: propUser, isGuestMode, onExitGuestMode }) => {
     const [editDescription, setEditDescription] = useState('');
     const [loadingDescription, setLoadingDescription] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [invitationDialogOpen, setInvitationDialogOpen] = useState(false);
 
     // 注册全局编辑方法
     useEffect(() => {
@@ -349,8 +352,25 @@ const HomePage = ({ user: propUser, isGuestMode, onExitGuestMode }) => {
                         display: { xs: 'none', md: 'flex' },
                         justifyContent: 'flex-end',
                         alignItems: 'center',
+                        gap: 1.5,
                         width: { xs: '100%', sm: 'auto' },
                     }}>
+                        {user.role === 'admin' && (
+                            <Button
+                                variant="outlined"
+                                color="primary"
+                                startIcon={<CardGiftcardIcon />}
+                                onClick={() => setInvitationDialogOpen(true)}
+                                sx={{
+                                    borderRadius: 2,
+                                    textTransform: 'none',
+                                    fontWeight: 600,
+                                    whiteSpace: 'nowrap'
+                                }}
+                            >
+                                邀请码管理
+                            </Button>
+                        )}
                         <FileUploader onUploadSuccess={handleUploadSuccess} />
                     </Box>
                 )}
@@ -471,6 +491,13 @@ const HomePage = ({ user: propUser, isGuestMode, onExitGuestMode }) => {
                                 <Button onClick={handleSaveEdit} color="primary" variant="contained">保存</Button>
                             </DialogActions>
                         </Dialog>
+                        {/* 邀请码管理弹窗 */}
+                        {user && user.role === 'admin' && (
+                            <InvitationManager
+                                open={invitationDialogOpen}
+                                onClose={() => setInvitationDialogOpen(false)}
+                            />
+                        )}
                     </>
                 ) : (
                     <Box sx={{

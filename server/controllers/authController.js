@@ -1,15 +1,22 @@
 const bcrypt = require('bcrypt');
 const { createJWE } = require('../utils/JWEUtils');
 const pool = require('../config/database');
+const invitationController = require('./invitationController');
 
 
 
 const authController = {
-    /*async register(req, res) {
-        const { username, password, email } = req.body;
+    async register(req, res) {
+        const { username, password, email, invitationCode } = req.body;
 
         try {
-            // 检查用户名和邮箱是否已存在
+            // 1. 校验邀请码（仅校验，不增加次数）
+            const codeResult = invitationController.checkCode(invitationCode);
+            if (!codeResult.valid) {
+                return res.status(400).json({ error: codeResult.error });
+            }
+
+            // 2. 检查用户名和邮箱是否已存在
             const [existing] = await pool.query(
                 'SELECT * FROM users WHERE username = ? OR email = ?',
                 [username, email]
@@ -19,14 +26,17 @@ const authController = {
                 return res.status(400).json({ error: '用户名或邮箱已存在' });
             }
 
-            // 加密密码
+            // 3. 加密密码
             const hashedPassword = await bcrypt.hash(password, 10);
 
-            // 创建用户
+            // 4. 创建用户（角色固定为 user）
             const [result] = await pool.query(
-                'INSERT INTO users (username, password, email) VALUES (?, ?, ?)',
-                [username, hashedPassword, email]
+                'INSERT INTO users (username, password, email, role) VALUES (?, ?, ?, ?)',
+                [username, hashedPassword, email, 'user']
             );
+
+            // 5. 注册成功后，正式使用邀请码（增加使用次数）
+            invitationController.useCode(invitationCode);
 
             res.status(201).json({
                 message: '注册成功',
@@ -36,7 +46,7 @@ const authController = {
             console.error('注册失败:', error);
             res.status(500).json({ error: '注册失败' });
         }
-    },*/
+    },
 
     async login(req, res) {
         const { username, password } = req.body;

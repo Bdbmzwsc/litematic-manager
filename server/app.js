@@ -5,6 +5,7 @@ const cors = require('cors');
 const path = require('path');
 const schematicsRouter = require('./routes/schematics');
 const authRouter = require('./routes/auth');
+const invitationRouter = require('./routes/invitation');
 
 const app = express();
 
@@ -35,6 +36,7 @@ app.use((req, res, next) => {
 
 // 路由配置
 app.use('/api/auth', authRouter);
+app.use('/api/invitations', invitationRouter);
 app.use('/api/schematics', schematicsRouter);
 
 // 错误处理中间件

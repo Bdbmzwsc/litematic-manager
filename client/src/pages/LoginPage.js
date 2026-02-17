@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
-import { 
-    Container, Box, Tabs, Tab, Paper, Button, Typography, 
+import {
+    Container, Box, Tabs, Tab, Paper, Button, Typography,
     Divider, Avatar, useTheme, alpha
 } from '@mui/material';
-import { 
-    Person as PersonIcon, 
+import {
+    Person as PersonIcon,
     LockOutlined as LockIcon,
     AccountCircle as AccountIcon,
-    VpnKey as VpnKeyIcon 
+    VpnKey as VpnKeyIcon,
+    PersonAdd as PersonAddIcon
 } from '@mui/icons-material';
 import Login from '../components/Login';
 import Register from '../components/Register';
@@ -27,8 +28,8 @@ const LoginPage = ({ onLoginSuccess, onGuestMode }) => {
     };
 
     return (
-        <Box 
-            sx={{ 
+        <Box
+            sx={{
                 minHeight: '100vh',
                 display: 'flex',
                 alignItems: 'center',
@@ -46,10 +47,10 @@ const LoginPage = ({ onLoginSuccess, onGuestMode }) => {
                         mb: 3
                     }}
                 >
-                    <Avatar 
-                        sx={{ 
-                            width: 56, 
-                            height: 56, 
+                    <Avatar
+                        sx={{
+                            width: 56,
+                            height: 56,
                             bgcolor: 'white',
                             color: 'primary.main',
                             mb: 2,
@@ -58,20 +59,20 @@ const LoginPage = ({ onLoginSuccess, onGuestMode }) => {
                     >
                         <VpnKeyIcon />
                     </Avatar>
-                    <Typography 
-                        component="h1" 
-                        variant="h4" 
-                        fontWeight="700" 
+                    <Typography
+                        component="h1"
+                        variant="h4"
+                        fontWeight="700"
                         color="white"
                         sx={{ textShadow: '0 2px 4px rgba(0,0,0,0.15)' }}
                     >
                         Minecraft原理图管理系统
                     </Typography>
                 </Box>
-                
-                <Paper 
-                    elevation={6} 
-                    sx={{ 
+
+                <Paper
+                    elevation={6}
+                    sx={{
                         borderRadius: 3,
                         overflow: 'hidden',
                         boxShadow: `0 10px 30px ${alpha(theme.palette.common.black, 0.15)}`,
@@ -79,19 +80,19 @@ const LoginPage = ({ onLoginSuccess, onGuestMode }) => {
                         position: 'relative'
                     }}
                 >
-                    <Box sx={{ 
+                    <Box sx={{
                         py: 3,
                         px: 3,
                         bgcolor: alpha(theme.palette.primary.main, 0.05)
                     }}>
-                        <Tabs 
-                            value={tabValue} 
+                        <Tabs
+                            value={tabValue}
                             onChange={(e, v) => setTabValue(v)}
                             centered
                             variant="fullWidth"
                             textColor="primary"
                             indicatorColor="primary"
-                            sx={{ 
+                            sx={{
                                 '& .MuiTab-root': {
                                     borderRadius: 1,
                                     py: 1.5,
@@ -106,43 +107,55 @@ const LoginPage = ({ onLoginSuccess, onGuestMode }) => {
                                 }
                             }}
                         >
-                            <Tab 
+                            <Tab
                                 label={
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                         <LockIcon fontSize="small" />
                                         <span>登录</span>
                                     </Box>
-                                } 
+                                }
+                            />
+                            <Tab
+                                label={
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <PersonAddIcon fontSize="small" />
+                                        <span>注册</span>
+                                    </Box>
+                                }
                             />
                         </Tabs>
                     </Box>
-                    
+
                     <Box sx={{ p: 4, pt: 3 }}>
+                        {tabValue === 0 ? (
                             <Login onLoginSuccess={onLoginSuccess} />
+                        ) : (
+                            <Register onRegisterSuccess={handleRegisterSuccess} />
+                        )}
                     </Box>
-                    
+
                     <Divider sx={{ mx: 4 }} />
-                    
+
                     <Box sx={{ px: 4, py: 3, bgcolor: 'background.default', borderRadius: '0 0 12px 12px' }}>
-                        <Typography 
-                            variant="body1" 
-                            color="text.secondary" 
-                            sx={{ 
-                                mb: 2, 
+                        <Typography
+                            variant="body1"
+                            color="text.secondary"
+                            sx={{
+                                mb: 2,
                                 textAlign: 'center',
-                                fontWeight: 500 
+                                fontWeight: 500
                             }}
                         >
                             无需账号，快速体验
                         </Typography>
-                        
+
                         <Button
                             variant="outlined"
                             color="secondary"
                             startIcon={<PersonIcon />}
                             fullWidth
                             onClick={handleGuestMode}
-                            sx={{ 
+                            sx={{
                                 py: 1.2,
                                 borderRadius: 2,
                                 textTransform: 'none',
@@ -158,12 +171,12 @@ const LoginPage = ({ onLoginSuccess, onGuestMode }) => {
                         >
                             以游客身份访问
                         </Button>
-                        
-                        <Typography 
-                            variant="caption" 
-                            color="text.secondary" 
-                            sx={{ 
-                                display: 'block', 
+
+                        <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            sx={{
+                                display: 'block',
                                 mt: 1.5,
                                 textAlign: 'center'
                             }}
@@ -172,12 +185,12 @@ const LoginPage = ({ onLoginSuccess, onGuestMode }) => {
                         </Typography>
                     </Box>
                 </Paper>
-                
-                <Typography 
-                    variant="body2" 
-                    color="white" 
-                    sx={{ 
-                        mt: 3, 
+
+                <Typography
+                    variant="body2"
+                    color="white"
+                    sx={{
+                        mt: 3,
                         textAlign: 'center',
                         opacity: 0.8
                     }}
@@ -189,4 +202,4 @@ const LoginPage = ({ onLoginSuccess, onGuestMode }) => {
     );
 };
 
-export default LoginPage; 
+export default LoginPage;

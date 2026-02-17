@@ -1,16 +1,17 @@
 import React, { useState } from 'react';
-import { 
-    Box, TextField, Button, Typography, Alert, 
+import {
+    Box, TextField, Button, Typography, Alert,
     InputAdornment, IconButton, alpha, useTheme,
     Grid
 } from '@mui/material';
-import { 
-    AccountCircle as UserIcon, 
+import {
+    AccountCircle as UserIcon,
     VpnKey as PasswordIcon,
     Email as EmailIcon,
     Visibility as VisibilityIcon,
     VisibilityOff as VisibilityOffIcon,
-    PersonAdd as RegisterIcon
+    PersonAdd as RegisterIcon,
+    CardGiftcard as InviteIcon
 } from '@mui/icons-material';
 import authService from '../services/auth';
 
@@ -18,6 +19,7 @@ const Register = ({ onRegisterSuccess }) => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [email, setEmail] = useState('');
+    const [invitationCode, setInvitationCode] = useState('');
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     const [showPassword, setShowPassword] = useState(false);
@@ -28,10 +30,16 @@ const Register = ({ onRegisterSuccess }) => {
         e.preventDefault();
         setError('');
         setSuccess('');
+
+        if (!invitationCode.trim()) {
+            setError('请输入邀请码');
+            return;
+        }
+
         setIsLoading(true);
 
         try {
-            await authService.register(username, password, email);
+            await authService.register(username, password, email, invitationCode.trim().toUpperCase());
             setSuccess('注册成功！请登录账号');
             if (onRegisterSuccess) {
                 setTimeout(() => {
@@ -52,10 +60,10 @@ const Register = ({ onRegisterSuccess }) => {
     return (
         <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
             {error && (
-                <Alert 
-                    severity="error" 
-                    sx={{ 
-                        mb: 3, 
+                <Alert
+                    severity="error"
+                    sx={{
+                        mb: 3,
                         borderRadius: 2,
                         boxShadow: `0 2px 8px ${alpha(theme.palette.error.main, 0.2)}`
                     }}
@@ -63,12 +71,12 @@ const Register = ({ onRegisterSuccess }) => {
                     {error}
                 </Alert>
             )}
-            
+
             {success && (
-                <Alert 
-                    severity="success" 
-                    sx={{ 
-                        mb: 3, 
+                <Alert
+                    severity="success"
+                    sx={{
+                        mb: 3,
                         borderRadius: 2,
                         boxShadow: `0 2px 8px ${alpha(theme.palette.success.main, 0.2)}`
                     }}
@@ -76,8 +84,34 @@ const Register = ({ onRegisterSuccess }) => {
                     {success}
                 </Alert>
             )}
-            
+
             <Grid container spacing={2}>
+                <Grid item xs={12}>
+                    <TextField
+                        fullWidth
+                        label="邀请码"
+                        value={invitationCode}
+                        onChange={(e) => setInvitationCode(e.target.value.toUpperCase())}
+                        required
+                        autoFocus
+                        placeholder="请输入 8 位邀请码"
+                        variant="outlined"
+                        inputProps={{ maxLength: 8, style: { letterSpacing: '2px', fontWeight: 600 } }}
+                        sx={{
+                            '& .MuiOutlinedInput-root': {
+                                borderRadius: 2
+                            }
+                        }}
+                        InputProps={{
+                            startAdornment: (
+                                <InputAdornment position="start">
+                                    <InviteIcon color="primary" />
+                                </InputAdornment>
+                            )
+                        }}
+                    />
+                </Grid>
+
                 <Grid item xs={12}>
                     <TextField
                         fullWidth
@@ -85,7 +119,6 @@ const Register = ({ onRegisterSuccess }) => {
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
                         required
-                        autoFocus
                         variant="outlined"
                         sx={{
                             '& .MuiOutlinedInput-root': {
@@ -101,7 +134,7 @@ const Register = ({ onRegisterSuccess }) => {
                         }}
                     />
                 </Grid>
-                
+
                 <Grid item xs={12}>
                     <TextField
                         fullWidth
@@ -125,7 +158,7 @@ const Register = ({ onRegisterSuccess }) => {
                         }}
                     />
                 </Grid>
-                
+
                 <Grid item xs={12}>
                     <TextField
                         fullWidth
@@ -162,14 +195,14 @@ const Register = ({ onRegisterSuccess }) => {
                     />
                 </Grid>
             </Grid>
-            
+
             <Button
                 type="submit"
                 variant="contained"
                 fullWidth
                 disabled={isLoading || success}
                 startIcon={<RegisterIcon />}
-                sx={{ 
+                sx={{
                     mt: 3,
                     py: 1.2,
                     borderRadius: 2,
@@ -186,22 +219,22 @@ const Register = ({ onRegisterSuccess }) => {
             >
                 {isLoading ? '注册中...' : success ? '注册成功' : '注册账号'}
             </Button>
-            
+
             {!success && (
-                <Typography 
-                    variant="caption" 
-                    color="text.secondary" 
-                    sx={{ 
-                        display: 'block', 
-                        mt: 2, 
-                        textAlign: 'center' 
+                <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{
+                        display: 'block',
+                        mt: 2,
+                        textAlign: 'center'
                     }}
                 >
-                    注册即表示您同意我们的服务条款和隐私政策
+                    注册需要有效的邀请码，请联系管理员获取
                 </Typography>
             )}
         </Box>
     );
 };
 
-export default Register; 
+export default Register;

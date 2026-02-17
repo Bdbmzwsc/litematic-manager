@@ -8,8 +8,9 @@ const validateToken = async (req, res, next) => {
     }
 
     const decoded = await verifyJWE(token, process.env.JWT_SECRET, process.env.JWT_ISSUER);
-    if (decoded.error)
-        res.status(401).json({ error: '无效的认证令牌' });
+    if (decoded.error) {
+        return res.status(401).json({ error: '无效的认证令牌' });
+    }
     req.user = decoded.payload;
     next();
 
