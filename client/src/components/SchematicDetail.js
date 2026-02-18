@@ -16,6 +16,7 @@ import {
     IconButton,
     Tooltip,
     Fade,
+    Snackbar,
     useTheme,
     useMediaQuery
 } from '@mui/material';
@@ -28,10 +29,13 @@ import {
     Person as PersonIcon,
     AccessTime as AccessTimeIcon,
     ViewInAr as ViewInArIcon,
-    Description as DescriptionIcon
+    Description as DescriptionIcon,
+    Share as ShareIcon,
+    CheckCircleOutline as CheckCircleOutlineIcon
 } from '@mui/icons-material';
 import { getSchematic, downloadSchematic, getViewBlob, getLitematicFile } from '../services/api';
 import MaterialsList from './MaterialsList';
+import { useSnackbar } from '../contexts/NotificationContext';
 
 const SchematicDetail = ({ open, onClose, schematicId }) => {
     const [schematic, setSchematic] = useState(null);
@@ -46,6 +50,8 @@ const SchematicDetail = ({ open, onClose, schematicId }) => {
     const [loading3D, setLoading3D] = useState(false);
     const [error3D, setError3D] = useState(null);
     const iframeRef = useRef(null);
+    const [showShareToast, setShowShareToast] = useState(false);
+    const showSnackbar = useSnackbar();
 
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -107,7 +113,24 @@ const SchematicDetail = ({ open, onClose, schematicId }) => {
         try {
             await downloadSchematic(schematic.id, schematic.name);
         } catch (error) {
-            alert('下载原理图失败: ' + (error.message || '未知错误'));
+            showSnackbar('下载原理图失败: ' + (error.message || '未知错误'), 'error');
+        }
+    };
+
+    // 分享按钮：复制当前URL到剪贴板
+    const handleShare = async () => {
+        try {
+            await navigator.clipboard.writeText(window.location.href);
+            setShowShareToast(true);
+        } catch (err) {
+            // 降级方案
+            const textArea = document.createElement('textarea');
+            textArea.value = window.location.href;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            setShowShareToast(true);
         }
     };
 
@@ -272,412 +295,19 @@ const SchematicDetail = ({ open, onClose, schematicId }) => {
     if (!open) return null;
 
     return (
-        <Dialog
-            open={open}
-            onClose={onClose}
-            maxWidth="lg"
-            fullWidth
-            fullScreen={isMobile}
-            PaperProps={{
-                sx: {
-                    minHeight: isMobile ? '100%' : '80vh',
-                    borderRadius: isMobile ? 0 : 3,
-                    boxShadow: '0 12px 24px rgba(0,0,0,0.15)',
-                    margin: isMobile ? 0 : undefined
-                }
-            }}
-        >
-            <DialogTitle sx={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                p: { xs: 2, sm: 3 },
-                borderBottom: '1px solid',
-                borderColor: 'divider',
-                flexWrap: { xs: 'wrap', sm: 'nowrap' },
-                gap: { xs: 1, sm: 2 }
-            }}>
-                <Box sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 1,
-                    width: { xs: '100%', sm: 'auto' },
-                    flex: { sm: 1 },
-                    order: { xs: 1, sm: 0 },
-                    minWidth: 0
-                }}>
-                    <Typography
-                        variant="subtitle1"
-                        fontWeight="600"
-                        sx={{
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                            fontSize: { xs: '1.1rem', sm: '1.25rem' },
-                            flex: { sm: 1 },
-                            minWidth: 0
-                        }}
-                        title={schematic?.name}
-                    >
-                        {schematic?.name}
-                    </Typography>
-                    {schematic && (
-                        <Chip
-                            icon={schematic?.is_public ? <PublicIcon fontSize="small" /> : <LockIcon fontSize="small" />}
-                            label={schematic?.is_public ? "公开" : "私有"}
-                            color={schematic?.is_public ? "default" : "primary"}
-                            size="small"
-                            sx={{
-                                height: 26,
-                                flexShrink: 0,
-                                ml: { xs: 1, sm: 2 }
-                            }}
-                        />
-                    )}
-                </Box>
-                <Box sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: { xs: 1, sm: 2 },
-                    flexShrink: 0,
-                    width: { xs: '100%', sm: 'auto' },
-                    order: { xs: 0, sm: 1 },
-                    justifyContent: { xs: 'flex-end', sm: 'flex-start' }
-                }}>
-                    {schematic && (
-                        <>
-                            <Button
-                                onClick={handle3DPreviewClick}
-                                color="secondary"
-                                variant="outlined"
-                                size="small"
-                                startIcon={<ViewInArIcon />}
-                                sx={{
-                                    minWidth: { xs: '80px', sm: '100px' },
-                                    px: { xs: 1, sm: 2 },
-                                    height: { sm: 32 }
-                                }}
-                            >
-                                <Box sx={{ display: 'block' }}>3D预览</Box>
-                            </Button>
-                            <Button
-                                onClick={handleDownload}
-                                color="primary"
-                                variant="outlined"
-                                size="small"
-                                startIcon={<DownloadIcon />}
-                                sx={{
-                                    minWidth: { xs: '70px', sm: '90px' },
-                                    px: { xs: 1, sm: 2 },
-                                    height: { sm: 32 }
-                                }}
-                            >
-                                <Box sx={{ display: 'block' }}>下载</Box>
-                            </Button>
-                        </>
-                    )}
-                    <IconButton
-                        onClick={onClose}
-                        size="small"
-                        sx={{
-                            bgcolor: 'grey.100',
-                            '&:hover': { bgcolor: 'grey.200' },
-                            width: 32,
-                            height: 32
-                        }}
-                    >
-                        <CloseIcon fontSize="small" />
-                    </IconButton>
-                </Box>
-            </DialogTitle>
-
-            <DialogContent sx={{ p: { xs: 2, sm: 3 } }}>
-                {loading ? (
-                    <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
-                        <CircularProgress />
-                    </Box>
-                ) : error ? (
-                    <Alert severity="error" sx={{ borderRadius: 2 }}>{error}</Alert>
-                ) : schematic && (
-                    <Grid container spacing={{ xs: 2, sm: 3 }}>
-                        <Grid item xs={12} md={8}>
-                            {/* 原理图创建者和时间信息 */}
-                            <Paper
-                                elevation={0}
-                                sx={{
-                                    p: 2,
-                                    mb: 3,
-                                    bgcolor: 'background.paper',
-                                    border: '1px solid',
-                                    borderColor: 'divider',
-                                    borderRadius: 2,
-                                    display: 'flex',
-                                    flexWrap: 'wrap',
-                                    gap: 3
-                                }}
-                            >
-                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                    <PersonIcon fontSize="small" sx={{ mr: 1, color: 'primary.main' }} />
-                                    <Typography variant="body2">
-                                        上传者: <strong>{schematic.creator_name}</strong>
-                                    </Typography>
-                                </Box>
-
-                                {schematic.created_at && (
-                                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                        <AccessTimeIcon fontSize="small" sx={{ mr: 1, color: 'primary.main' }} />
-                                        <Typography variant="body2">
-                                            上传于: {formatDate(schematic.created_at)}
-                                        </Typography>
-                                    </Box>
-                                )}
-                            </Paper>
-
-                            <Typography
-                                variant="subtitle1"
-                                gutterBottom
-                                fontWeight="600"
-                                sx={{ mb: 2 }}
-                            >
-                                三视图
-                            </Typography>
-
-                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: { xs: 2, sm: 3 } }}>
-                                <Box>
-                                    <Typography
-                                        variant="subtitle1"
-                                        gutterBottom
-                                        fontWeight="500"
-                                        sx={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            mb: 1.5,
-                                            '&:after': {
-                                                content: '""',
-                                                display: 'block',
-                                                height: '1px',
-                                                bgcolor: 'divider',
-                                                flexGrow: 1,
-                                                ml: 1
-                                            }
-                                        }}
-                                    >
-                                        俯视图
-                                    </Typography>
-                                    {viewsLoading ?
-                                        <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-                                            <CircularProgress size={30} />
-                                        </Box>
-                                        : renderImage(views.top, '俯视图', 'top')}
-                                </Box>
-
-                                <Grid container spacing={2}>
-                                    <Grid item xs={12} md={6}>
-                                        <Typography
-                                            variant="subtitle1"
-                                            gutterBottom
-                                            fontWeight="500"
-                                            sx={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                mb: 1.5,
-                                                '&:after': {
-                                                    content: '""',
-                                                    display: 'block',
-                                                    height: '1px',
-                                                    bgcolor: 'divider',
-                                                    flexGrow: 1,
-                                                    ml: 1
-                                                }
-                                            }}
-                                        >
-                                            正视图
-                                        </Typography>
-                                        {viewsLoading ?
-                                            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-                                                <CircularProgress size={30} />
-                                            </Box>
-                                            : renderImage(views.front, '正视图', 'front')}
-                                    </Grid>
-                                    <Grid item xs={12} md={6}>
-                                        <Typography
-                                            variant="subtitle1"
-                                            gutterBottom
-                                            fontWeight="500"
-                                            sx={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                mb: 1.5,
-                                                '&:after': {
-                                                    content: '""',
-                                                    display: 'block',
-                                                    height: '1px',
-                                                    bgcolor: 'divider',
-                                                    flexGrow: 1,
-                                                    ml: 1
-                                                }
-                                            }}
-                                        >
-                                            侧视图
-                                        </Typography>
-                                        {viewsLoading ?
-                                            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-                                                <CircularProgress size={30} />
-                                            </Box>
-                                            : renderImage(views.side, '侧视图', 'side')}
-                                    </Grid>
-                                </Grid>
-
-                                {viewErrors.general && (
-                                    <Alert severity="error" sx={{ mt: 2, borderRadius: 2 }}>{viewErrors.general}</Alert>
-                                )}
-                            </Box>
-
-                            {/* New README Section */}
-                            <Box sx={{ mt: 5 }}>
-                                <Typography
-                                    variant="subtitle1"
-                                    gutterBottom
-                                    fontWeight="600"
-                                    sx={{
-                                        pb: 1.5,
-                                        borderBottom: '1px solid',
-                                        borderColor: 'divider',
-                                        display: 'flex',
-                                        alignItems: 'center'
-                                    }}
-                                >
-                                    <DescriptionIcon fontSize="small" sx={{ mr: 1, color: 'primary.main' }} />
-                                    项目说明 (README)
-                                </Typography>
-
-                                <Paper
-                                    elevation={0}
-                                    sx={{
-                                        p: 3,
-                                        bgcolor: 'background.paper',
-                                        border: '1px solid',
-                                        borderColor: 'divider',
-                                        borderRadius: 2,
-                                        minHeight: 100,
-                                        '& .markdown-body': {
-                                            backgroundColor: 'transparent',
-                                            color: 'text.primary',
-                                            fontFamily: 'inherit'
-                                        },
-                                        // Ensure markdown content adapts to theme
-                                        '& .markdown-body pre': {
-                                            backgroundColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(0,0,0,0.3)' : '#f6f8fa'
-                                        }
-                                    }}
-                                >
-                                    {schematic.description ? (
-                                        <div className="markdown-body" style={{ backgroundColor: 'transparent' }}>
-                                            <ReactMarkdown>
-                                                {schematic.description}
-                                            </ReactMarkdown>
-                                        </div>
-                                    ) : (
-                                        <Typography color="text.secondary" fontStyle="italic">
-                                            暂无说明文档
-                                        </Typography>
-                                    )}
-                                </Paper>
-                            </Box>
-                        </Grid>
-
-                        <Grid item xs={12} md={4}>
-                            <Paper
-                                elevation={2}
-                                sx={{
-                                    p: 2,
-                                    borderRadius: 2,
-                                    height: { xs: '100%', md: 'auto' },
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    maxHeight: { md: '860px' },
-                                    alignSelf: 'flex-start'
-                                }}
-                            >
-                                <Typography
-                                    variant="subtitle1"
-                                    gutterBottom
-                                    fontWeight="600"
-                                    sx={{
-                                        pb: 1.5,
-                                        borderBottom: '1px solid',
-                                        borderColor: 'divider'
-                                    }}
-                                >
-                                    材料列表
-                                </Typography>
-                                <Box sx={{
-                                    flexGrow: 1,
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    overflow: 'hidden'
-                                }}>
-                                    <MaterialsList materials={schematic?.materials} />
-                                </Box>
-                            </Paper>
-                        </Grid>
-                    </Grid>
-                )}
-            </DialogContent>
-
-            {/* 图像放大查看对话框 */}
+        <>
             <Dialog
-                open={!!enlargedView}
-                onClose={() => setEnlargedView(null)}
-                maxWidth="xl"
-                PaperProps={{
-                    sx: { borderRadius: 2 }
-                }}
-            >
-                <DialogContent sx={{ p: 1, position: 'relative' }}>
-                    {enlargedView && (
-                        <Fade in={!!enlargedView}>
-                            <Box>
-                                <IconButton
-                                    sx={{
-                                        position: 'absolute',
-                                        top: 8,
-                                        right: 8,
-                                        bgcolor: 'rgba(255,255,255,0.8)',
-                                        zIndex: 1,
-                                        '&:hover': { bgcolor: 'white' }
-                                    }}
-                                    onClick={() => setEnlargedView(null)}
-                                >
-                                    <CloseIcon />
-                                </IconButton>
-                                <img
-                                    src={enlargedView.src}
-                                    alt={enlargedView.alt}
-                                    style={{
-                                        maxWidth: '100%',
-                                        maxHeight: '80vh',
-                                        display: 'block'
-                                    }}
-                                />
-                            </Box>
-                        </Fade>
-                    )}
-                </DialogContent>
-            </Dialog>
-
-            {/* 3D预览对话框 - 使用iframe嵌入现有的litematic-viewer */}
-            <Dialog
-                open={show3DPreview}
-                onClose={close3DPreview}
-                maxWidth="xl"
+                open={open}
+                onClose={onClose}
+                maxWidth="lg"
                 fullWidth
                 fullScreen={isMobile}
                 PaperProps={{
                     sx: {
-                        minHeight: '90vh',
-                        maxHeight: '90vh',
-                        borderRadius: isMobile ? 0 : 2
+                        minHeight: isMobile ? '100%' : '80vh',
+                        borderRadius: isMobile ? 0 : 3,
+                        boxShadow: '0 12px 24px rgba(0,0,0,0.15)',
+                        margin: isMobile ? 0 : undefined
                     }
                 }}
             >
@@ -685,72 +315,510 @@ const SchematicDetail = ({ open, onClose, schematicId }) => {
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
-                    p: 1,
+                    p: { xs: 2, sm: 3 },
                     borderBottom: '1px solid',
-                    borderColor: 'divider'
+                    borderColor: 'divider',
+                    flexWrap: { xs: 'wrap', sm: 'nowrap' },
+                    gap: { xs: 1, sm: 2 }
                 }}>
-                    <Typography variant="subtitle1">
-                        {schematic?.name} - 3D预览
-                    </Typography>
-                    <IconButton onClick={close3DPreview} size="small">
-                        <CloseIcon />
-                    </IconButton>
-                </DialogTitle>
-                <DialogContent sx={{ p: 0, overflow: 'hidden' }}>
-                    {error3D ? (
-                        <Box display="flex" justifyContent="center" alignItems="center" height="500px" flexDirection="column">
-                            <Alert severity="error" sx={{ mb: 2 }}>{error3D}</Alert>
-                            <Button
-                                variant="outlined"
-                                color="primary"
-                                onClick={() => {
-                                    setError3D(null);
-                                    handle3DPreviewClick();
+                    <Box sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
+                        width: { xs: '100%', sm: 'auto' },
+                        flex: { sm: 1 },
+                        order: { xs: 1, sm: 0 },
+                        minWidth: 0
+                    }}>
+                        <Typography
+                            variant="subtitle1"
+                            fontWeight="600"
+                            sx={{
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                fontSize: { xs: '1.1rem', sm: '1.25rem' },
+                                flex: { sm: 1 },
+                                minWidth: 0
+                            }}
+                            title={schematic?.name}
+                        >
+                            {schematic?.name}
+                        </Typography>
+                        {schematic && (
+                            <Chip
+                                icon={schematic?.is_public ? <PublicIcon fontSize="small" /> : <LockIcon fontSize="small" />}
+                                label={schematic?.is_public ? "公开" : "私有"}
+                                color={schematic?.is_public ? "default" : "primary"}
+                                size="small"
+                                sx={{
+                                    height: 26,
+                                    flexShrink: 0,
+                                    ml: { xs: 1, sm: 2 }
                                 }}
-                            >
-                                重试
-                            </Button>
-                        </Box>
-                    ) : viewerUrl ? (
-                        <>
-                            {loading3D && (
-                                <Box
-                                    display="flex"
-                                    justifyContent="center"
-                                    alignItems="center"
-                                    position="absolute"
-                                    zIndex={10}
-                                    width="100%"
-                                    height="100%"
-                                    bgcolor="rgba(0,0,0,0.5)"
-                                >
-                                    <CircularProgress sx={{ color: 'white' }} />
-                                    <Typography sx={{ ml: 2, color: 'white' }}>加载3D模型中...</Typography>
-                                </Box>
-                            )}
-                            <iframe
-                                ref={iframeRef}
-                                src={viewerUrl}
-                                style={{
-                                    width: '100%',
-                                    height: '100%',
-                                    border: 'none',
-                                    minHeight: '80vh'
-                                }}
-                                title="Litematic 3D Viewer"
-                                allow="fullscreen"
-                                onLoad={handleIframeLoad}
                             />
-                        </>
-                    ) : (
-                        <Box display="flex" justifyContent="center" alignItems="center" height="500px">
+                        )}
+                    </Box>
+                    <Box sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: { xs: 1, sm: 2 },
+                        flexShrink: 0,
+                        width: { xs: '100%', sm: 'auto' },
+                        order: { xs: 0, sm: 1 },
+                        justifyContent: { xs: 'flex-end', sm: 'flex-start' }
+                    }}>
+                        {schematic && (
+                            <>
+                                <Button
+                                    onClick={handle3DPreviewClick}
+                                    color="secondary"
+                                    variant="outlined"
+                                    size="small"
+                                    startIcon={<ViewInArIcon />}
+                                    sx={{
+                                        minWidth: { xs: '80px', sm: '100px' },
+                                        px: { xs: 1, sm: 2 },
+                                        height: { sm: 32 }
+                                    }}
+                                >
+                                    <Box sx={{ display: 'block' }}>3D预览</Box>
+                                </Button>
+                                <Button
+                                    onClick={handleDownload}
+                                    color="primary"
+                                    variant="outlined"
+                                    size="small"
+                                    startIcon={<DownloadIcon />}
+                                    sx={{
+                                        minWidth: { xs: '70px', sm: '90px' },
+                                        px: { xs: 1, sm: 2 },
+                                        height: { sm: 32 }
+                                    }}
+                                >
+                                    <Box sx={{ display: 'block' }}>下载</Box>
+                                </Button>
+                                <Button
+                                    onClick={handleShare}
+                                    color="info"
+                                    variant="outlined"
+                                    size="small"
+                                    startIcon={<ShareIcon />}
+                                    sx={{
+                                        minWidth: { xs: '70px', sm: '90px' },
+                                        px: { xs: 1, sm: 2 },
+                                        height: { sm: 32 }
+                                    }}
+                                >
+                                    <Box sx={{ display: 'block' }}>分享</Box>
+                                </Button>
+                            </>
+                        )}
+                        <IconButton
+                            onClick={onClose}
+                            size="small"
+                            sx={{
+                                bgcolor: 'grey.100',
+                                '&:hover': { bgcolor: 'grey.200' },
+                                width: 32,
+                                height: 32
+                            }}
+                        >
+                            <CloseIcon fontSize="small" />
+                        </IconButton>
+                    </Box>
+                </DialogTitle>
+
+                <DialogContent sx={{ p: { xs: 2, sm: 3 } }}>
+                    {loading ? (
+                        <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
                             <CircularProgress />
-                            <Typography sx={{ ml: 2 }}>加载3D预览...</Typography>
                         </Box>
+                    ) : error ? (
+                        <Alert severity="error" sx={{ borderRadius: 2 }}>{error}</Alert>
+                    ) : schematic && (
+                        <Grid container spacing={{ xs: 2, sm: 3 }}>
+                            <Grid item xs={12} md={8}>
+                                {/* 原理图创建者和时间信息 */}
+                                <Paper
+                                    elevation={0}
+                                    sx={{
+                                        p: 2,
+                                        mb: 3,
+                                        bgcolor: 'background.paper',
+                                        border: '1px solid',
+                                        borderColor: 'divider',
+                                        borderRadius: 2,
+                                        display: 'flex',
+                                        flexWrap: 'wrap',
+                                        gap: 3
+                                    }}
+                                >
+                                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                        <PersonIcon fontSize="small" sx={{ mr: 1, color: 'primary.main' }} />
+                                        <Typography variant="body2">
+                                            上传者: <strong>{schematic.creator_name}</strong>
+                                        </Typography>
+                                    </Box>
+
+                                    {schematic.created_at && (
+                                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                            <AccessTimeIcon fontSize="small" sx={{ mr: 1, color: 'primary.main' }} />
+                                            <Typography variant="body2">
+                                                上传于: {formatDate(schematic.created_at)}
+                                            </Typography>
+                                        </Box>
+                                    )}
+                                </Paper>
+
+                                <Typography
+                                    variant="subtitle1"
+                                    gutterBottom
+                                    fontWeight="600"
+                                    sx={{ mb: 2 }}
+                                >
+                                    三视图
+                                </Typography>
+
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: { xs: 2, sm: 3 } }}>
+                                    <Box>
+                                        <Typography
+                                            variant="subtitle1"
+                                            gutterBottom
+                                            fontWeight="500"
+                                            sx={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                mb: 1.5,
+                                                '&:after': {
+                                                    content: '""',
+                                                    display: 'block',
+                                                    height: '1px',
+                                                    bgcolor: 'divider',
+                                                    flexGrow: 1,
+                                                    ml: 1
+                                                }
+                                            }}
+                                        >
+                                            俯视图
+                                        </Typography>
+                                        {viewsLoading ?
+                                            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+                                                <CircularProgress size={30} />
+                                            </Box>
+                                            : renderImage(views.top, '俯视图', 'top')}
+                                    </Box>
+
+                                    <Grid container spacing={2}>
+                                        <Grid item xs={12} md={6}>
+                                            <Typography
+                                                variant="subtitle1"
+                                                gutterBottom
+                                                fontWeight="500"
+                                                sx={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    mb: 1.5,
+                                                    '&:after': {
+                                                        content: '""',
+                                                        display: 'block',
+                                                        height: '1px',
+                                                        bgcolor: 'divider',
+                                                        flexGrow: 1,
+                                                        ml: 1
+                                                    }
+                                                }}
+                                            >
+                                                正视图
+                                            </Typography>
+                                            {viewsLoading ?
+                                                <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+                                                    <CircularProgress size={30} />
+                                                </Box>
+                                                : renderImage(views.front, '正视图', 'front')}
+                                        </Grid>
+                                        <Grid item xs={12} md={6}>
+                                            <Typography
+                                                variant="subtitle1"
+                                                gutterBottom
+                                                fontWeight="500"
+                                                sx={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    mb: 1.5,
+                                                    '&:after': {
+                                                        content: '""',
+                                                        display: 'block',
+                                                        height: '1px',
+                                                        bgcolor: 'divider',
+                                                        flexGrow: 1,
+                                                        ml: 1
+                                                    }
+                                                }}
+                                            >
+                                                侧视图
+                                            </Typography>
+                                            {viewsLoading ?
+                                                <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+                                                    <CircularProgress size={30} />
+                                                </Box>
+                                                : renderImage(views.side, '侧视图', 'side')}
+                                        </Grid>
+                                    </Grid>
+
+                                    {viewErrors.general && (
+                                        <Alert severity="error" sx={{ mt: 2, borderRadius: 2 }}>{viewErrors.general}</Alert>
+                                    )}
+                                </Box>
+
+                                {/* New README Section */}
+                                <Box sx={{ mt: 5 }}>
+                                    <Typography
+                                        variant="subtitle1"
+                                        gutterBottom
+                                        fontWeight="600"
+                                        sx={{
+                                            pb: 1.5,
+                                            borderBottom: '1px solid',
+                                            borderColor: 'divider',
+                                            display: 'flex',
+                                            alignItems: 'center'
+                                        }}
+                                    >
+                                        <DescriptionIcon fontSize="small" sx={{ mr: 1, color: 'primary.main' }} />
+                                        项目说明 (README)
+                                    </Typography>
+
+                                    <Paper
+                                        elevation={0}
+                                        sx={{
+                                            p: 3,
+                                            bgcolor: 'background.paper',
+                                            border: '1px solid',
+                                            borderColor: 'divider',
+                                            borderRadius: 2,
+                                            minHeight: 100,
+                                            '& .markdown-body': {
+                                                backgroundColor: 'transparent',
+                                                color: 'text.primary',
+                                                fontFamily: 'inherit'
+                                            },
+                                            // Ensure markdown content adapts to theme
+                                            '& .markdown-body pre': {
+                                                backgroundColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(0,0,0,0.3)' : '#f6f8fa'
+                                            }
+                                        }}
+                                    >
+                                        {schematic.description ? (
+                                            <div className="markdown-body" style={{ backgroundColor: 'transparent' }}>
+                                                <ReactMarkdown>
+                                                    {schematic.description}
+                                                </ReactMarkdown>
+                                            </div>
+                                        ) : (
+                                            <Typography color="text.secondary" fontStyle="italic">
+                                                暂无说明文档
+                                            </Typography>
+                                        )}
+                                    </Paper>
+                                </Box>
+                            </Grid>
+
+                            <Grid item xs={12} md={4}>
+                                <Paper
+                                    elevation={2}
+                                    sx={{
+                                        p: 2,
+                                        borderRadius: 2,
+                                        height: { xs: '100%', md: 'auto' },
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        maxHeight: { md: '860px' },
+                                        alignSelf: 'flex-start'
+                                    }}
+                                >
+                                    <Typography
+                                        variant="subtitle1"
+                                        gutterBottom
+                                        fontWeight="600"
+                                        sx={{
+                                            pb: 1.5,
+                                            borderBottom: '1px solid',
+                                            borderColor: 'divider'
+                                        }}
+                                    >
+                                        材料列表
+                                    </Typography>
+                                    <Box sx={{
+                                        flexGrow: 1,
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        overflow: 'hidden'
+                                    }}>
+                                        <MaterialsList materials={schematic?.materials} />
+                                    </Box>
+                                </Paper>
+                            </Grid>
+                        </Grid>
                     )}
                 </DialogContent>
+
+                {/* 图像放大查看对话框 */}
+                <Dialog
+                    open={!!enlargedView}
+                    onClose={() => setEnlargedView(null)}
+                    maxWidth="xl"
+                    PaperProps={{
+                        sx: { borderRadius: 2 }
+                    }}
+                >
+                    <DialogContent sx={{ p: 1, position: 'relative' }}>
+                        {enlargedView && (
+                            <Fade in={!!enlargedView}>
+                                <Box>
+                                    <IconButton
+                                        sx={{
+                                            position: 'absolute',
+                                            top: 8,
+                                            right: 8,
+                                            bgcolor: 'rgba(255,255,255,0.8)',
+                                            zIndex: 1,
+                                            '&:hover': { bgcolor: 'white' }
+                                        }}
+                                        onClick={() => setEnlargedView(null)}
+                                    >
+                                        <CloseIcon />
+                                    </IconButton>
+                                    <img
+                                        src={enlargedView.src}
+                                        alt={enlargedView.alt}
+                                        style={{
+                                            maxWidth: '100%',
+                                            maxHeight: '80vh',
+                                            display: 'block'
+                                        }}
+                                    />
+                                </Box>
+                            </Fade>
+                        )}
+                    </DialogContent>
+                </Dialog>
+
+                {/* 3D预览对话框 - 使用iframe嵌入现有的litematic-viewer */}
+                <Dialog
+                    open={show3DPreview}
+                    onClose={close3DPreview}
+                    maxWidth="xl"
+                    fullWidth
+                    fullScreen={isMobile}
+                    PaperProps={{
+                        sx: {
+                            minHeight: '90vh',
+                            maxHeight: '90vh',
+                            borderRadius: isMobile ? 0 : 2
+                        }
+                    }}
+                >
+                    <DialogTitle sx={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        p: 1,
+                        borderBottom: '1px solid',
+                        borderColor: 'divider'
+                    }}>
+                        <Typography variant="subtitle1">
+                            {schematic?.name} - 3D预览
+                        </Typography>
+                        <IconButton onClick={close3DPreview} size="small">
+                            <CloseIcon />
+                        </IconButton>
+                    </DialogTitle>
+                    <DialogContent sx={{ p: 0, overflow: 'hidden' }}>
+                        {error3D ? (
+                            <Box display="flex" justifyContent="center" alignItems="center" height="500px" flexDirection="column">
+                                <Alert severity="error" sx={{ mb: 2 }}>{error3D}</Alert>
+                                <Button
+                                    variant="outlined"
+                                    color="primary"
+                                    onClick={() => {
+                                        setError3D(null);
+                                        handle3DPreviewClick();
+                                    }}
+                                >
+                                    重试
+                                </Button>
+                            </Box>
+                        ) : viewerUrl ? (
+                            <>
+                                {loading3D && (
+                                    <Box
+                                        display="flex"
+                                        justifyContent="center"
+                                        alignItems="center"
+                                        position="absolute"
+                                        zIndex={10}
+                                        width="100%"
+                                        height="100%"
+                                        bgcolor="rgba(0,0,0,0.5)"
+                                    >
+                                        <CircularProgress sx={{ color: 'white' }} />
+                                        <Typography sx={{ ml: 2, color: 'white' }}>加载3D模型中...</Typography>
+                                    </Box>
+                                )}
+                                <iframe
+                                    ref={iframeRef}
+                                    src={viewerUrl}
+                                    style={{
+                                        width: '100%',
+                                        height: '100%',
+                                        border: 'none',
+                                        minHeight: '80vh'
+                                    }}
+                                    title="Litematic 3D Viewer"
+                                    allow="fullscreen"
+                                    onLoad={handleIframeLoad}
+                                />
+                            </>
+                        ) : (
+                            <Box display="flex" justifyContent="center" alignItems="center" height="500px">
+                                <CircularProgress />
+                                <Typography sx={{ ml: 2 }}>加载3D预览...</Typography>
+                            </Box>
+                        )}
+                    </DialogContent>
+                </Dialog>
             </Dialog>
-        </Dialog>
+
+            {/* 分享成功提示 */}
+            <Snackbar
+                open={showShareToast}
+                autoHideDuration={2000}
+                onClose={() => setShowShareToast(false)}
+                anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+            >
+                <Box
+                    sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1.5,
+                        px: 3,
+                        py: 1.5,
+                        borderRadius: 3,
+                        bgcolor: 'rgba(46, 125, 50, 0.95)',
+                        color: 'white',
+                        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.18)',
+                        backdropFilter: 'blur(12px)',
+                        fontSize: '0.95rem',
+                        fontWeight: 500,
+                        letterSpacing: '0.3px',
+                    }}
+                >
+                    <CheckCircleOutlineIcon sx={{ fontSize: '1.3rem' }} />
+                    链接已复制到剪贴板
+                </Box>
+            </Snackbar>
+        </>
     );
 };
 

@@ -4,6 +4,7 @@ import LoginPage from './pages/LoginPage';
 import HomePage from './pages/HomePage';
 import authService from './services/auth';
 import { Box, CssBaseline, createTheme, ThemeProvider } from '@mui/material';
+import { NotificationProvider } from './contexts/NotificationContext';
 
 // 创建主题
 const theme = createTheme({
@@ -72,33 +73,35 @@ function App() {
 
     return (
         <ThemeProvider theme={theme}>
-            <CssBaseline />
-            <Box sx={{
-                minHeight: '100vh',
-                bgcolor: '#f5f5f5'
-            }}>
-                {isLoggedIn || guestMode ? (
-                    <Routes>
-                        <Route path="/litematic/:id" element={<HomePageWithParams {...homePageProps} />} />
-                        <Route path="*" element={<HomePage {...homePageProps} />} />
-                    </Routes>
-                ) : (
-                    <Routes>
-                        <Route path="/litematic/:id" element={
-                            <LoginPage
-                                onLoginSuccess={handleLoginSuccess}
-                                onGuestMode={enterGuestMode}
-                            />
-                        } />
-                        <Route path="*" element={
-                            <LoginPage
-                                onLoginSuccess={handleLoginSuccess}
-                                onGuestMode={enterGuestMode}
-                            />
-                        } />
-                    </Routes>
-                )}
-            </Box>
+            <NotificationProvider>
+                <CssBaseline />
+                <Box sx={{
+                    minHeight: '100vh',
+                    bgcolor: '#f5f5f5'
+                }}>
+                    {isLoggedIn || guestMode ? (
+                        <Routes>
+                            <Route path="/litematic/:id" element={<HomePageWithParams {...homePageProps} />} />
+                            <Route path="*" element={<HomePage {...homePageProps} />} />
+                        </Routes>
+                    ) : (
+                        <Routes>
+                            <Route path="/litematic/:id" element={
+                                <LoginPage
+                                    onLoginSuccess={handleLoginSuccess}
+                                    onGuestMode={enterGuestMode}
+                                />
+                            } />
+                            <Route path="*" element={
+                                <LoginPage
+                                    onLoginSuccess={handleLoginSuccess}
+                                    onGuestMode={enterGuestMode}
+                                />
+                            } />
+                        </Routes>
+                    )}
+                </Box>
+            </NotificationProvider>
         </ThemeProvider>
     );
 }

@@ -25,9 +25,11 @@ import {
 import { useNavigate } from 'react-router-dom';
 import SchematicDetail from './SchematicDetail';
 import { updateSchematicVisibility } from '../services/api';
+import { useSnackbar } from '../contexts/NotificationContext';
 
 const SchematicList = ({ schematics, onDelete, onEdit, currentUser, openSchematicId }) => {
     const navigate = useNavigate();
+    const showSnackbar = useSnackbar();
 
     // Dialog 状态由 URL 驱动
     const detailOpen = !!openSchematicId;
@@ -79,7 +81,7 @@ const SchematicList = ({ schematics, onDelete, onEdit, currentUser, openSchemati
             } catch (error) {
                 console.error('服务器更新失败:', error);
                 // 恢复原始状态
-                alert('更新可见性失败: ' + (error.message || '未知错误') + '\n状态已恢复');
+                showSnackbar('更新可见性失败: ' + (error.message || '未知错误') + '，状态已恢复', 'error');
 
                 // 这里可以恢复原始状态，但由于onEdit会触发刷新，所以不需要额外处理
                 if (onEdit) {
@@ -88,7 +90,7 @@ const SchematicList = ({ schematics, onDelete, onEdit, currentUser, openSchemati
             }
         } catch (error) {
             console.error('更新可见性失败:', error);
-            alert('更新可见性失败: ' + (error.message || '未知错误'));
+            showSnackbar('更新可见性失败: ' + (error.message || '未知错误'), 'error');
         }
     };
 
@@ -403,7 +405,7 @@ const SchematicList = ({ schematics, onDelete, onEdit, currentUser, openSchemati
                                                             console.error('onEdit回调未定义!', typeof onEdit);
 
                                                             // 如果回调未定义，使用一个备用方法
-                                                            alert('即将编辑原理图: ' + schematic.name);
+                                                            showSnackbar('即将编辑原理图: ' + schematic.name, 'info');
                                                         }
                                                     }}
                                                     sx={{

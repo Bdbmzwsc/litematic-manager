@@ -7,12 +7,15 @@ import UserInfo from '../components/UserInfo';
 import InvitationManager from '../components/InvitationManager';
 import { searchSchematics, deleteSchematic, updateSchematic } from '../services/api';
 import authService from '../services/auth';
+import { useSnackbar, useConfirm } from '../contexts/NotificationContext';
 import VpnKeyIcon from '@mui/icons-material/VpnKey';
 import CardGiftcardIcon from '@mui/icons-material/CardGiftcard';
 
 const HomePage = ({ user: propUser, isGuestMode, onExitGuestMode, openSchematicId }) => {
     const [schematics, setSchematics] = useState([]);
     const [filteredSchematics, setFilteredSchematics] = useState([]);
+    const showSnackbar = useSnackbar();
+    const showConfirm = useConfirm();
     const [activeTab, setActiveTab] = useState(0); // 0=所有原理图，1=我的原理图
     const [user, setUser] = useState(propUser || authService.getCurrentUser());
     const [editDialog, setEditDialog] = useState({ open: false, schematic: null });
@@ -126,7 +129,7 @@ const HomePage = ({ user: propUser, isGuestMode, onExitGuestMode, openSchematicI
                 setFilteredSchematics(visibleSchematics);
             }
         } catch (error) {
-            alert('加载原理图失败: ' + (error.message || '未知错误'));
+            showSnackbar('加载原理图失败: ' + (error.message || '未知错误'), 'error');
         } finally {
             setLoading(false);
         }
@@ -148,7 +151,13 @@ const HomePage = ({ user: propUser, isGuestMode, onExitGuestMode, openSchematicI
 
     // 处理删除原理图
     const handleDeleteSchematic = async (id) => {
-        if (!window.confirm('确定要删除这个原理图吗？')) {
+        const confirmed = await showConfirm({
+            title: '删除确认',
+            message: '确定要删除这个原理图吗？此操作不可撤销。',
+            confirmText: '删除',
+            cancelText: '取消'
+        });
+        if (!confirmed) {
             return;
         }
 
@@ -157,7 +166,7 @@ const HomePage = ({ user: propUser, isGuestMode, onExitGuestMode, openSchematicI
             // 刷新列表
             loadSchematics();
         } catch (error) {
-            alert('删除失败: ' + (error.message || '未知错误'));
+            showSnackbar('删除失败: ' + (error.message || '未知错误'), 'error');
         }
     };
 
@@ -209,7 +218,7 @@ const HomePage = ({ user: propUser, isGuestMode, onExitGuestMode, openSchematicI
             // 刷新列表
             loadSchematics();
         } catch (error) {
-            alert('更新失败: ' + (error.message || '未知错误'));
+            showSnackbar('更新失败: ' + (error.message || '未知错误'), 'error');
         }
     };
 

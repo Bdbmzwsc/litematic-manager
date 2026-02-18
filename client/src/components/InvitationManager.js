@@ -14,6 +14,7 @@ import {
     CardGiftcard as InviteIcon
 } from '@mui/icons-material';
 import invitationService from '../services/invitation';
+import { useConfirm } from '../contexts/NotificationContext';
 
 const InvitationManager = ({ open, onClose }) => {
     const [invitations, setInvitations] = useState([]);
@@ -25,6 +26,7 @@ const InvitationManager = ({ open, onClose }) => {
     const [successMsg, setSuccessMsg] = useState('');
     const [copiedCode, setCopiedCode] = useState('');
     const theme = useTheme();
+    const showConfirm = useConfirm();
 
     const loadInvitations = useCallback(async () => {
         setLoading(true);
@@ -62,7 +64,13 @@ const InvitationManager = ({ open, onClose }) => {
     };
 
     const handleDelete = async (code) => {
-        if (!window.confirm(`确定要删除邀请码 ${code} 吗？`)) return;
+        const confirmed = await showConfirm({
+            title: '删除确认',
+            message: `确定要删除邀请码 ${code} 吗？`,
+            confirmText: '删除',
+            cancelText: '取消'
+        });
+        if (!confirmed) return;
         try {
             await invitationService.deleteInvitation(code);
             loadInvitations();
