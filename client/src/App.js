@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Routes, Route, useParams } from 'react-router-dom';
 import LoginPage from './pages/LoginPage';
 import HomePage from './pages/HomePage';
 import authService from './services/auth';
@@ -27,6 +28,12 @@ const theme = createTheme({
     },
 });
 
+// 包装组件，用于从URL中提取schematicId并传递给HomePage
+const HomePageWithParams = (props) => {
+    const { id } = useParams();
+    return <HomePage {...props} openSchematicId={id ? parseInt(id) : null} />;
+};
+
 function App() {
     const [user, setUser] = useState(authService.getCurrentUser());
     const [isLoggedIn, setIsLoggedIn] = useState(!!authService.getCurrentUser());
@@ -50,31 +57,46 @@ function App() {
     useEffect(() => {
         // 将函数暴露到全局，供其他组件调用
         window.enterGuestMode = enterGuestMode;
-        
+
         // 清理函数
         return () => {
             delete window.enterGuestMode;
         };
     }, []);
 
+    const homePageProps = {
+        user,
+        isGuestMode: guestMode,
+        onExitGuestMode: exitGuestMode,
+    };
+
     return (
         <ThemeProvider theme={theme}>
             <CssBaseline />
-            <Box sx={{ 
+            <Box sx={{
                 minHeight: '100vh',
                 bgcolor: '#f5f5f5'
             }}>
                 {isLoggedIn || guestMode ? (
-                    <HomePage 
-                        user={user} 
-                        isGuestMode={guestMode}
-                        onExitGuestMode={exitGuestMode}
-                    />
+                    <Routes>
+                        <Route path="/litematic/:id" element={<HomePageWithParams {...homePageProps} />} />
+                        <Route path="*" element={<HomePage {...homePageProps} />} />
+                    </Routes>
                 ) : (
-                    <LoginPage 
-                        onLoginSuccess={handleLoginSuccess}
-                        onGuestMode={enterGuestMode}
-                    />
+                    <Routes>
+                        <Route path="/litematic/:id" element={
+                            <LoginPage
+                                onLoginSuccess={handleLoginSuccess}
+                                onGuestMode={enterGuestMode}
+                            />
+                        } />
+                        <Route path="*" element={
+                            <LoginPage
+                                onLoginSuccess={handleLoginSuccess}
+                                onGuestMode={enterGuestMode}
+                            />
+                        } />
+                    </Routes>
                 )}
             </Box>
         </ThemeProvider>

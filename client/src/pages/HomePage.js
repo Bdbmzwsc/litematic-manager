@@ -10,7 +10,7 @@ import authService from '../services/auth';
 import VpnKeyIcon from '@mui/icons-material/VpnKey';
 import CardGiftcardIcon from '@mui/icons-material/CardGiftcard';
 
-const HomePage = ({ user: propUser, isGuestMode, onExitGuestMode }) => {
+const HomePage = ({ user: propUser, isGuestMode, onExitGuestMode, openSchematicId }) => {
     const [schematics, setSchematics] = useState([]);
     const [filteredSchematics, setFilteredSchematics] = useState([]);
     const [activeTab, setActiveTab] = useState(0); // 0=所有原理图，1=我的原理图
@@ -442,6 +442,7 @@ const HomePage = ({ user: propUser, isGuestMode, onExitGuestMode }) => {
                                     currentUser={user}
                                     onDelete={handleDeleteSchematic}
                                     onEdit={handleEditSchematic}
+                                    openSchematicId={openSchematicId}
                                 />
                             ) : (
                                 <Box sx={{ p: 4, textAlign: 'center' }}>

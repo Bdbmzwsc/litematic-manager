@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
     Grid,
     Card,
@@ -22,21 +22,22 @@ import {
     Person as PersonIcon,
     GetApp as GetAppIcon
 } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
 import SchematicDetail from './SchematicDetail';
 import { updateSchematicVisibility } from '../services/api';
 
-const SchematicList = ({ schematics, onDelete, onEdit, currentUser }) => {
-    const [selectedSchematic, setSelectedSchematic] = useState(null);
-    const [detailOpen, setDetailOpen] = useState(false);
+const SchematicList = ({ schematics, onDelete, onEdit, currentUser, openSchematicId }) => {
+    const navigate = useNavigate();
+
+    // Dialog 状态由 URL 驱动
+    const detailOpen = !!openSchematicId;
 
     const handleViewDetail = (schematic) => {
-        setSelectedSchematic(schematic);
-        setDetailOpen(true);
+        navigate(`/litematic/${schematic.id}`);
     };
 
     const handleCloseDetail = () => {
-        setDetailOpen(false);
-        setSelectedSchematic(null);
+        navigate('/');
     };
 
     const handleVisibilityChange = async (event, schematic) => {
@@ -151,8 +152,8 @@ const SchematicList = ({ schematics, onDelete, onEdit, currentUser }) => {
                                 overflow: 'hidden',
                                 backgroundColor: 'background.paper !important',
                                 borderLeft: theme => `3px solid ${schematic.is_public
-                                        ? theme.palette.primary.main
-                                        : theme.palette.grey[300]
+                                    ? theme.palette.primary.main
+                                    : theme.palette.grey[300]
                                     }`,
                                 '&:hover': {
                                     transform: { xs: 'none', sm: 'translateY(-4px)' },
@@ -451,10 +452,10 @@ const SchematicList = ({ schematics, onDelete, onEdit, currentUser }) => {
             <SchematicDetail
                 open={detailOpen}
                 onClose={handleCloseDetail}
-                schematicId={selectedSchematic?.id}
+                schematicId={openSchematicId}
             />
         </Box>
     );
 };
 
-export default SchematicList; 
+export default SchematicList;
