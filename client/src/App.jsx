@@ -28,14 +28,6 @@ const AuthLayout = ({ children }) => {
         gap: '0.75rem',
         marginBottom: '2rem'
       }}>
-        <div style={{
-          background: 'var(--text-primary)',
-          color: 'var(--bg-primary)',
-          padding: '0.5rem',
-          borderRadius: 'var(--radius-sm)'
-        }}>
-          <Layers size={24} />
-        </div>
         <h1 style={{ fontSize: '1.5rem', letterSpacing: '-0.03em' }}>SGU Server</h1>
       </div>
 
