@@ -15,6 +15,17 @@ function generateLitematic(nbt, config, x, z) {
 
     config.forEach(sub => {
         sub.position = sub.position.map((str) => Number(str.replace('targetX', x.toString()).replace('targetZ', z.toString())));
+        if (!sub.generation) {
+            const freshNbt = NbtFile.read(originalBuffer);
+            let a = freshNbt.root.getCompound('Regions').getCompound(sub.name);
+            a.getCompound('Position').set('x', new NbtInt(Number(sub.position[0])));
+            a.getCompound('Position').set('y', new NbtInt(Number(sub.position[1])));
+            a.getCompound('Position').set('z', new NbtInt(Number(sub.position[2])));
+            nbt.root.getCompound('Regions').set(`${i.toString()}`, a);
+            i++;
+            return;
+        }
+
 
         switch (sub.generate_direct) {
             case "+z":
