@@ -63,10 +63,20 @@ export const api = {
                 method: 'DELETE',
             });
         },
-        async upload(file) {
+        async upload(file, options = {}) {
             const token = localStorage.getItem('jwt_token');
             const formData = new FormData();
             formData.append('file', file);
+
+            if (options.description !== undefined) {
+                formData.append('description', options.description);
+            }
+            if (options.type !== undefined) {
+                formData.append('type', options.type);
+            }
+            if (options.config !== undefined) {
+                formData.append('config', typeof options.config === 'string' ? options.config : JSON.stringify(options.config));
+            }
 
             const response = await fetch(`${API_BASE}/schematics/upload`, {
                 method: 'POST',
@@ -82,6 +92,15 @@ export const api = {
             }
 
             return response.json();
+        },
+        async getConfig(id) {
+            return api.fetch(`/schematics/${id}/config`);
+        },
+        async updateConfig(id, data) {
+            return api.fetch(`/schematics/${id}/config`, {
+                method: 'PUT',
+                body: JSON.stringify(data),
+            });
         }
     },
 

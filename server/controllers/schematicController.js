@@ -1,8 +1,26 @@
 const Schematic = require('../models/schematic');
 const { processLitematicFile } = require('../utils/fileProcessor');
+const { readNbtFile, generateLitematic } = require('../utils/litematicGeneration');
 const fs = require('fs');
 const path = require('path');
 const pool = require('../config/database');
+
+// Helper: read or create config.json for a schematic folder
+function readOrCreateConfig(folderPath) {
+    const configPath = path.join(folderPath, 'config.json');
+    if (fs.existsSync(configPath)) {
+        try {
+            return JSON.parse(fs.readFileSync(configPath, 'utf8'));
+        } catch (e) {
+            console.error('Error parsing config.json:', e);
+            return { type: 0, config: [] };
+        }
+    }
+    // Auto-create default config.json
+    const defaultConfig = { type: 0, config: [] };
+    fs.writeFileSync(configPath, JSON.stringify(defaultConfig, null, 2), 'utf8');
+    return defaultConfig;
+}
 
 const schematicController = {
     async uploadSchematic(req, res) {
@@ -35,10 +53,28 @@ const schematicController = {
             fs.renameSync(file.path, sourcePath);
             console.log(`File moved to: ${sourcePath}`);
 
-            // Create Empty README.md
+            // Create README.md (with description if provided)
             const readmePath = path.join(targetDir, 'README.md');
-            fs.writeFileSync(readmePath, '');
-            console.log(`Created empty README at: ${readmePath}`);
+            const description = req.body.description || '';
+            fs.writeFileSync(readmePath, description, 'utf8');
+            console.log(`Created README at: ${readmePath}`);
+
+            // Create config.json
+            const schematicType = parseInt(req.body.type) || 0;
+            let schematicConfig = [];
+            if (req.body.config) {
+                try {
+                    schematicConfig = typeof req.body.config === 'string'
+                        ? JSON.parse(req.body.config)
+                        : req.body.config;
+                } catch (e) {
+                    console.error('Invalid config format:', e);
+                }
+            }
+            const configData = { type: schematicType, config: schematicConfig };
+            const configPath = path.join(targetDir, 'config.json');
+            fs.writeFileSync(configPath, JSON.stringify(configData, null, 2), 'utf8');
+            console.log(`Created config.json at: ${configPath}`);
 
             // Prepare Initial Data
             // Extract original name for display, cleaning up any path residue
@@ -203,9 +239,14 @@ const schematicController = {
                 result.front_view_path = `${urlPrefix}${folder}/front.png`;
                 result.readme_path = `${urlPrefix}${folder}/README.md`;
 
+                // Read config.json to determine schematic_type
+                const folderPath = path.join(__dirname, '../uploads', folder);
+                const schematicConfig = readOrCreateConfig(folderPath);
+                result.schematic_type = schematicConfig.type || 0;
+
                 // Try to read README content
                 try {
-                    const readmeAbsolutePath = path.join(__dirname, '../uploads', folder, 'README.md');
+                    const readmeAbsolutePath = path.join(folderPath, 'README.md');
                     if (fs.existsSync(readmeAbsolutePath)) {
                         const description = fs.readFileSync(readmeAbsolutePath, 'utf8');
                         result.description = description;
@@ -384,7 +425,175 @@ const schematicController = {
     },
 
     async downloadSchematic(req, res) {
-        await checkAccessAndServeFile(req, res, 'file_path');
+        try {
+            const { id } = req.params;
+            const userId = req.user?.id;
+            const isAdmin = req.user?.role === 'admin';
+
+            // Permission check
+            let query;
+            let params;
+            if (isAdmin) {
+                query = 'SELECT s.*, u.username as creator_name FROM schematics s JOIN users u ON s.user_id = u.id WHERE s.id = ?';
+                params = [id];
+            } else {
+                query = 'SELECT s.*, u.username as creator_name FROM schematics s JOIN users u ON s.user_id = u.id WHERE s.id = ? AND (s.is_public = true OR s.user_id = ?)';
+                params = [id, userId || 0];
+            }
+
+            const [schematics] = await pool.query(query, params);
+            if (schematics.length === 0) {
+                return res.status(404).json({ error: '原理图不存在或无权访问' });
+            }
+
+            const schematic = schematics[0];
+
+            // Only folder-based schematics support type=1
+            if (schematic.folder_name) {
+                const folderPath = path.join(__dirname, '../uploads', schematic.folder_name);
+                const schematicConfig = readOrCreateConfig(folderPath);
+
+                if (schematicConfig.type === 1) {
+                    // Assembly download: requires x, z query params
+                    const x = parseInt(req.query.x);
+                    const z = parseInt(req.query.z);
+
+                    if (!Number.isInteger(x) || !Number.isInteger(z) || x <= 0 || z <= 0) {
+                        return res.status(400).json({ error: '参数错误：x 和 z 必须为正整数' });
+                    }
+
+                    // Increment download count
+
+
+                    // Read and assemble
+                    const sourcePath = path.join(folderPath, 'source.litematic');
+                    if (!fs.existsSync(sourcePath)) {
+                        return res.status(404).json({ error: '源文件不存在' });
+                    }
+
+                    let resultBuffer;
+                    try {
+                        const nbt = readNbtFile(sourcePath);
+                        // Deep clone config to avoid mutating stored config
+                        const configClone = JSON.parse(JSON.stringify(schematicConfig.config));
+                        const assembledNbt = generateLitematic(nbt, configClone, x, z);
+                        resultBuffer = Buffer.from(assembledNbt.write());
+                    } catch (error) {
+                        console.error('生成失败:', error);
+                        return res.status(500).json({ error: '生成失败' });
+                    }
+                    // Set download headers
+
+                    const filename = schematic.name + '.litematic';
+                    const containsNonAscii = /[^\x00-\x7F]/.test(filename);
+                    const encodedFilename = containsNonAscii
+                        ? `filename*=UTF-8''${encodeURIComponent(filename)}`
+                        : `filename="${filename}"`;
+                    try {
+                        await pool.execute(
+                            'UPDATE schematics SET download_count = COALESCE(download_count, 0) + 1 WHERE id = ?',
+                            [id]
+                        );
+                    } catch (countErr) {
+                        console.error('更新下载计数失败:', countErr);
+                    }
+
+                    res.setHeader('Content-Disposition', `attachment; ${encodedFilename}`);
+                    res.setHeader('Content-Type', 'application/octet-stream');
+                    res.setHeader('Content-Length', resultBuffer.length);
+                    return res.send(resultBuffer);
+                }
+            }
+
+            // type === 0 or legacy: fall back to normal file download
+            await checkAccessAndServeFile(req, res, 'file_path');
+        } catch (error) {
+            console.error('下载失败:', error);
+            res.status(500).json({ error: '下载失败: ' + (error.message || '未知错误') });
+        }
+    },
+
+    async getConfig(req, res) {
+        try {
+            const { id } = req.params;
+            const userId = req.user?.id;
+            const isAdmin = req.user?.role === 'admin';
+
+            const [schematics] = await pool.query('SELECT * FROM schematics WHERE id = ?', [id]);
+            if (schematics.length === 0) {
+                return res.status(404).json({ error: '原理图不存在' });
+            }
+
+            const schematic = schematics[0];
+            if (schematic.user_id !== userId && !isAdmin) {
+                return res.status(403).json({ error: '没有权限访问此配置' });
+            }
+
+            if (!schematic.folder_name) {
+                return res.json({ type: 0, config: [] });
+            }
+
+            const folderPath = path.join(__dirname, '../uploads', schematic.folder_name);
+            const config = readOrCreateConfig(folderPath);
+            res.json(config);
+        } catch (error) {
+            console.error('获取配置失败:', error);
+            res.status(500).json({ error: '获取配置失败' });
+        }
+    },
+
+    async updateConfig(req, res) {
+        if (!req.user) {
+            return res.status(401).json({ error: '需要登录' });
+        }
+
+        try {
+            const { id } = req.params;
+            const { type, config } = req.body;
+            const userId = req.user.id;
+            const isAdmin = req.user.role === 'admin';
+
+            const [schematics] = await pool.query('SELECT * FROM schematics WHERE id = ?', [id]);
+            if (schematics.length === 0) {
+                return res.status(404).json({ error: '原理图不存在' });
+            }
+
+            const schematic = schematics[0];
+            if (schematic.user_id !== userId && !isAdmin) {
+                return res.status(403).json({ error: '没有权限修改此配置' });
+            }
+
+            if (!schematic.folder_name) {
+                return res.status(400).json({ error: '旧格式投影不支持配置' });
+            }
+
+            // Validate type
+            if (type !== undefined && type !== 0 && type !== 1) {
+                return res.status(400).json({ error: 'type 必须为 0 或 1' });
+            }
+
+            // Validate config array when type=1
+            if ((type === 1 || type === undefined) && config !== undefined) {
+                if (!Array.isArray(config)) {
+                    return res.status(400).json({ error: 'config 必须为数组' });
+                }
+            }
+
+            // Read existing config, merge updates
+            const folderPath = path.join(__dirname, '../uploads', schematic.folder_name);
+            const existingConfig = readOrCreateConfig(folderPath);
+
+            if (type !== undefined) existingConfig.type = type;
+            if (config !== undefined) existingConfig.config = config;
+
+            const configPath = path.join(folderPath, 'config.json');
+            fs.writeFileSync(configPath, JSON.stringify(existingConfig, null, 2), 'utf8');
+
+            res.json(existingConfig);
+        } catch (error) {
+            console.error('更新配置失败:', error);
+            res.status(500).json({ error: '更新配置失败' });
+        }
     }
 };
 

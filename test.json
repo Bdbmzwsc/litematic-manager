@@ -1,0 +1,11 @@
+[
+    {
+        "name": "test",
+        "position": [
+            "0",
+            "0",
+            "0"
+        ],
+        "generate_direct": "+z"
+    }
+]

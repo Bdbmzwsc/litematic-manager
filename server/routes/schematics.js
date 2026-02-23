@@ -75,6 +75,10 @@ router.get('/:id/side-view', optionalAuth, schematicController.getSideView);
 router.get('/:id/top-view', optionalAuth, schematicController.getTopView);
 // 获取原理图所需材料清单
 router.get('/:id/materials', optionalAuth, schematicController.getMaterials);
+// 获取原理图配置
+router.get('/:id/config', validateToken, schematicController.getConfig);
+// 更新原理图配置
+router.put('/:id/config', validateToken, schematicController.updateConfig);
 // 下载原理图文件（限流：5次/分钟）
 router.get('/:id/download', downloadLimiter, optionalAuth, schematicController.downloadSchematic);
 

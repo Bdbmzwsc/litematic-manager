@@ -12,6 +12,11 @@ const UploadPage = () => {
     const [uploading, setUploading] = useState(false);
     const [uploadResult, setUploadResult] = useState(null); // { success: bool, message: string, id?: number }
 
+    // New Fields State
+    const [description, setDescription] = useState('');
+    const [type, setType] = useState('0'); // '0' or '1'
+    const [configStr, setConfigStr] = useState('[\n  {\n    "name": "region_name",\n    "position": ["0", "0", "0"],\n    "generate_direct": "+x"\n  }\n]');
+
     const handleDrag = (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -48,16 +53,36 @@ const UploadPage = () => {
 
     const handleUpload = async () => {
         if (!file) return;
+
+        let parsedConfig = [];
+        if (type === '1') {
+            try {
+                parsedConfig = JSON.parse(configStr);
+                if (!Array.isArray(parsedConfig)) {
+                    throw new Error('配置必须是一个 JSON 数组');
+                }
+            } catch (e) {
+                setUploadResult({ success: false, message: `配置 JSON 格式错误: ${e.message}` });
+                return;
+            }
+        }
+
         try {
             setUploading(true);
             setUploadResult(null);
-            const result = await api.schematics.upload(file);
+            const result = await api.schematics.upload(file, {
+                description,
+                type: parseInt(type),
+                config: parsedConfig
+            });
             setUploadResult({
                 success: true,
                 message: `"${result.name || file.name}" 上传成功`,
                 id: result.id
             });
             setFile(null);
+            setDescription('');
+            setType('0');
         } catch (err) {
             console.error('Upload error:', err);
             setUploadResult({ success: false, message: err.message || '上传失败，请重试' });
@@ -69,6 +94,8 @@ const UploadPage = () => {
     const handleClear = () => {
         setFile(null);
         setUploadResult(null);
+        setDescription('');
+        setType('0');
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
@@ -137,31 +164,81 @@ const UploadPage = () => {
 
                     {/* Selected File Info */}
                     {file && (
-                        <div className="glass-panel" style={{
-                            padding: '1rem 1.25rem',
-                            display: 'flex', alignItems: 'center', gap: '1rem',
-                            marginBottom: '1.5rem',
-                            animation: 'fadeIn 0.3s ease'
-                        }}>
-                            <FileBox size={24} style={{ color: 'var(--text-secondary)', flexShrink: 0 }} />
-                            <div style={{ flex: 1, overflow: 'hidden' }}>
-                                <div style={{ fontWeight: '500', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                    {file.name}
+                        <div className="animate-fade-in-up" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginBottom: '1.5rem' }}>
+                            <div className="glass-panel" style={{
+                                padding: '1rem 1.25rem',
+                                display: 'flex', alignItems: 'center', gap: '1rem',
+                            }}>
+                                <FileBox size={24} style={{ color: 'var(--text-secondary)', flexShrink: 0 }} />
+                                <div style={{ flex: 1, overflow: 'hidden' }}>
+                                    <div style={{ fontWeight: '500', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        {file.name}
+                                    </div>
+                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>
+                                        {(file.size / 1024).toFixed(1)} KB
+                                    </div>
                                 </div>
-                                <div style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>
-                                    {(file.size / 1024).toFixed(1)} KB
-                                </div>
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); handleClear(); }}
+                                    style={{
+                                        background: 'transparent', border: 'none', color: 'var(--text-tertiary)',
+                                        cursor: 'pointer', padding: '0.25rem', display: 'flex'
+                                    }}
+                                    title="移除文件"
+                                >
+                                    <X size={18} />
+                                </button>
                             </div>
-                            <button
-                                onClick={(e) => { e.stopPropagation(); handleClear(); }}
-                                style={{
-                                    background: 'transparent', border: 'none', color: 'var(--text-tertiary)',
-                                    cursor: 'pointer', padding: '0.25rem', display: 'flex'
-                                }}
-                                title="移除文件"
-                            >
-                                <X size={18} />
-                            </button>
+
+                            {/* Additional Settings */}
+                            <div className="glass-panel" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', fontWeight: '500' }}>
+                                        项目说明 (README)
+                                    </label>
+                                    <textarea
+                                        className="glass-input"
+                                        placeholder="使用 Markdown 编写您的项目说明..."
+                                        value={description}
+                                        onChange={e => setDescription(e.target.value)}
+                                        style={{ width: '100%', minHeight: '120px', resize: 'vertical', padding: '0.75rem', fontSize: '0.9rem' }}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', fontWeight: '500' }}>
+                                        投影类型
+                                    </label>
+                                    <select
+                                        className="glass-input"
+                                        value={type}
+                                        onChange={e => setType(e.target.value)}
+                                        style={{ width: '100%', padding: '0.75rem', fontSize: '0.9rem' }}
+                                    >
+                                        <option value="0">普通投影</option>
+                                        <option value="1">投影生成</option>
+                                    </select>
+                                </div>
+
+                                {type === '1' && (
+                                    <div className="animate-fade-in">
+                                        <label style={{ display: 'block', fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', fontWeight: '500' }}>
+                                            配置
+                                        </label>
+                                        <textarea
+                                            className="glass-input"
+                                            value={configStr}
+                                            onChange={e => setConfigStr(e.target.value)}
+                                            style={{
+                                                width: '100%', minHeight: '180px', resize: 'vertical',
+                                                padding: '0.75rem', fontSize: '0.85rem',
+                                                fontFamily: 'ui-monospace, SFMono-Regular, Consolas, monospace'
+                                            }}
+                                            spellCheck="false"
+                                        />
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     )}
 

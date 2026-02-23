@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Download, Share2, Clock, User as UserIcon, Shield, ChevronLeft, Loader2, FileBox, Pencil, Check, X, Trash2 } from 'lucide-react';
+import { Download, Share2, Clock, User as UserIcon, Shield, ChevronLeft, Loader2, FileBox, Pencil, Check, X, Trash2, Settings } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { api } from '../../lib/api';
 import Navbar from '../layout/Navbar';
 import { useNotification } from '../../contexts/NotificationContext';
 import { useConfirm } from '../../contexts/ConfirmContext';
+import ConfigModal from './ConfigModal';
+import AssemblyModal from './AssemblyModal';
 
 const SchematicDetail = () => {
     const { id } = useParams();
@@ -31,6 +33,10 @@ const SchematicDetail = () => {
     const [isEditingVisibility, setIsEditingVisibility] = useState(false);
     const [editVisibility, setEditVisibility] = useState(false);
     const [savingVisibility, setSavingVisibility] = useState(false);
+
+    // Modal states
+    const [showConfigModal, setShowConfigModal] = useState(false);
+    const [showAssemblyModal, setShowAssemblyModal] = useState(false);
 
     // Get current user and determine if they can edit
     const token = localStorage.getItem('jwt_token');
@@ -102,10 +108,21 @@ const SchematicDetail = () => {
         }
     };
 
-    const handleDownload = () => {
-        // Create an invisible anchor to trigger the download through the browser
+    const handleDownloadClick = () => {
+        if (schematic.schematic_type === 1) {
+            setShowAssemblyModal(true);
+        } else {
+            executeDownload();
+        }
+    };
+
+    const executeDownload = (x, z) => {
         const token = localStorage.getItem('jwt_token');
-        const downloadUrl = `/api/schematics/${id}/download`;
+
+        let url = `/api/schematics/${id}/download`;
+        if (x && z) {
+            url += `?x=${x}&z=${z}`;
+        }
 
         // We can't easily use standard fetch for file downloads if we want the browser to handle Saving.
         // Wait, since we are proxying, we can just navigate or open a new window
@@ -116,7 +133,7 @@ const SchematicDetail = () => {
         // if they are authorized by default (public schematics).
 
         // Let's do the robust Blob approach to ensure the auth token is sent if present.
-        api.fetch(`/schematics/${id}/download`, {
+        api.fetch(`/schematics/${id}/download${x && z ? `?x=${x}&z=${z}` : ''}`, {
             // Need to specify we expect a blob, but our api wrapper assumes JSON.
             // So we bypass the api wrapper for the download to handle the blob correctly.
         }).catch(() => { }); // Dummy catch, actual logic below
@@ -124,7 +141,7 @@ const SchematicDetail = () => {
         const headers = new Headers();
         if (token) headers.append('Authorization', `Bearer ${token}`);
 
-        fetch(`/api/schematics/${id}/download`, { headers })
+        fetch(url, { headers })
             .then(response => {
                 if (!response.ok) throw new Error('下载失败');
                 const disposition = response.headers.get('Content-Disposition');
@@ -149,6 +166,7 @@ const SchematicDetail = () => {
 
                 // Optimistically update download count in UI
                 setSchematic(prev => ({ ...prev, download_count: (prev.download_count || 0) + 1 }));
+                if (showAssemblyModal) setShowAssemblyModal(false);
             })
             .catch(err => {
                 console.error("Download error:", err);
@@ -294,7 +312,7 @@ const SchematicDetail = () => {
 
                         {/* Action Buttons */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', minWidth: '240px' }}>
-                            <button className="glass-button" onClick={handleDownload} style={{ padding: '1rem', fontSize: '1.05rem' }}>
+                            <button className="glass-button" onClick={handleDownloadClick} style={{ padding: '1rem', fontSize: '1.05rem' }}>
                                 <Download size={20} />
                                 下载文件
                             </button>
@@ -304,15 +322,26 @@ const SchematicDetail = () => {
                             </button>
 
                             {canEdit && (
-                                <button
-                                    className="glass-button secondary"
-                                    onClick={handleDelete}
-                                    style={{ color: 'var(--error)', border: '1px solid rgba(239, 68, 68, 0.3)' }}
-                                    title="删除投影"
-                                >
-                                    <Trash2 size={18} />
-                                    删除投影
-                                </button>
+                                <>
+                                    <button
+                                        className="glass-button secondary"
+                                        onClick={() => setShowConfigModal(true)}
+                                        style={{ border: '1px solid var(--glass-border)' }}
+                                    >
+                                        <Settings size={18} />
+                                        投影配置
+                                    </button>
+
+                                    <button
+                                        className="glass-button secondary"
+                                        onClick={handleDelete}
+                                        style={{ color: 'var(--error)', border: '1px solid rgba(239, 68, 68, 0.3)' }}
+                                        title="删除投影"
+                                    >
+                                        <Trash2 size={18} />
+                                        删除投影
+                                    </button>
+                                </>
                             )}
                         </div>
                     </div>
@@ -335,6 +364,19 @@ const SchematicDetail = () => {
                                     <div>
                                         <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.2rem' }}>作者</div>
                                         <div style={{ fontWeight: '500' }}>{schematic.creator_name}</div>
+                                    </div>
+                                </li>
+                                <li style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+                                    <FileBox size={18} style={{ color: 'var(--text-tertiary)', marginTop: '2px' }} />
+                                    <div>
+                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.2rem' }}>类型</div>
+                                        <div style={{ fontWeight: '500', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            {schematic.schematic_type === 1 ? (
+                                                <><span style={{ color: '#3b82f6' }}>投影生成</span></>
+                                            ) : (
+                                                <span>普通投影</span>
+                                            )}
+                                        </div>
                                     </div>
                                 </li>
                                 <li style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
@@ -495,6 +537,22 @@ const SchematicDetail = () => {
 
                 </div>
             </main >
+
+            {showConfigModal && (
+                <ConfigModal
+                    schematic={schematic}
+                    onClose={() => setShowConfigModal(false)}
+                    onUpdate={(newType) => setSchematic(prev => ({ ...prev, schematic_type: newType }))}
+                />
+            )}
+
+            {showAssemblyModal && (
+                <AssemblyModal
+                    schematicName={schematic.name}
+                    onCancel={() => setShowAssemblyModal(false)}
+                    onConfirm={(x, z) => executeDownload(x, z)}
+                />
+            )}
         </div >
     );
 };
