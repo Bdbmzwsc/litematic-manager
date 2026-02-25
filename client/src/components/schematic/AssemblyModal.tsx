@@ -1,14 +1,20 @@
 import React, { useState } from 'react';
 import { X, Download, Box } from 'lucide-react';
 
-const AssemblyModal = ({ onConfirm, onCancel, schematicName }) => {
-    const [x, setX] = useState(1);
-    const [z, setZ] = useState(1);
+interface AssemblyModalProps {
+    onConfirm: (x: number, z: number) => void;
+    onCancel: () => void;
+    schematicName: string;
+}
+
+const AssemblyModal: React.FC<AssemblyModalProps> = ({ onConfirm, onCancel, schematicName }) => {
+    const [x, setX] = useState<number | string>(1);
+    const [z, setZ] = useState<number | string>(1);
     const [error, setError] = useState('');
 
     const handleConfirm = () => {
-        const parsedX = parseInt(x);
-        const parsedZ = parseInt(z);
+        const parsedX = parseInt(String(x));
+        const parsedZ = parseInt(String(z));
 
         if (isNaN(parsedX) || isNaN(parsedZ) || parsedX <= 0 || parsedZ <= 0) {
             setError('x 和 z 必须为正整数');

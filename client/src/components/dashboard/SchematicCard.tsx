@@ -1,8 +1,13 @@
 import React from 'react';
 import { Download, Clock, User as UserIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import type { Schematic } from '../../types';
 
-const SchematicCard = ({ schematic }) => {
+interface SchematicCardProps {
+    schematic: Schematic;
+}
+
+const SchematicCard: React.FC<SchematicCardProps> = ({ schematic }) => {
     const navigate = useNavigate();
 
     // Format date beautifully

@@ -3,13 +3,13 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Lock, User, LogIn, Loader2, Eye } from 'lucide-react';
 import { api } from '../../lib/api';
 
-const LoginForm = () => {
+const LoginForm: React.FC = () => {
     const [formData, setFormData] = useState({ username: '', password: '' });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const navigate = useNavigate();
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setLoading(true);
         setError('');
@@ -20,13 +20,13 @@ const LoginForm = () => {
             localStorage.setItem('user', JSON.stringify(user));
             navigate('/'); // Redirect to dashboard
         } catch (err) {
-            setError(err.message || '登录失败，请检查您的令牌');
+            setError(err instanceof Error ? err.message : '登录失败，请检查您的令牌');
         } finally {
             setLoading(false);
         }
     };
 
-    const handleChange = (e) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
     };
 

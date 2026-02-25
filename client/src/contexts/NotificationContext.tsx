@@ -1,9 +1,21 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback } from 'react';
 import { CheckCircle, AlertCircle, Info, X } from 'lucide-react';
 
-const NotificationContext = createContext(null);
+type NotificationType = 'info' | 'success' | 'error';
 
-export const useNotification = () => {
+interface Notification {
+    id: string;
+    message: string;
+    type: NotificationType;
+}
+
+interface NotificationContextType {
+    showNotification: (message: string, type?: NotificationType, duration?: number) => void;
+}
+
+const NotificationContext = createContext<NotificationContextType | null>(null);
+
+export const useNotification = (): NotificationContextType => {
     const context = useContext(NotificationContext);
     if (!context) {
         throw new Error('useNotification must be used within a NotificationProvider');
@@ -11,12 +23,20 @@ export const useNotification = () => {
     return context;
 };
 
-export const NotificationProvider = ({ children }) => {
-    const [notifications, setNotifications] = useState([]);
+interface NotificationProviderProps {
+    children: React.ReactNode;
+}
 
-    const showNotification = useCallback((message, type = 'info', duration = 4000) => {
+export const NotificationProvider: React.FC<NotificationProviderProps> = ({ children }) => {
+    const [notifications, setNotifications] = useState<Notification[]>([]);
+
+    const removeNotification = useCallback((id: string) => {
+        setNotifications((prev) => prev.filter(n => n.id !== id));
+    }, []);
+
+    const showNotification = useCallback((message: string, type: NotificationType = 'info', duration: number = 4000) => {
         const id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
-        const newNotification = { id, message, type };
+        const newNotification: Notification = { id, message, type };
 
         setNotifications((prev) => [...prev, newNotification]);
 
@@ -25,13 +45,9 @@ export const NotificationProvider = ({ children }) => {
                 removeNotification(id);
             }, duration);
         }
-    }, []);
+    }, [removeNotification]);
 
-    const removeNotification = useCallback((id) => {
-        setNotifications((prev) => prev.filter(n => n.id !== id));
-    }, []);
-
-    const getIcon = (type) => {
+    const getIcon = (type: NotificationType): React.ReactNode => {
         switch (type) {
             case 'success': return <CheckCircle size={18} style={{ color: 'var(--success)' }} />;
             case 'error': return <AlertCircle size={18} style={{ color: 'var(--error)' }} />;
@@ -39,7 +55,7 @@ export const NotificationProvider = ({ children }) => {
         }
     };
 
-    const getBgColor = (type) => {
+    const getBgColor = (type: NotificationType): string => {
         switch (type) {
             case 'success': return 'var(--success-bg)';
             case 'error': return 'var(--error-bg)';
@@ -47,7 +63,7 @@ export const NotificationProvider = ({ children }) => {
         }
     };
 
-    const getBorderColor = (type) => {
+    const getBorderColor = (type: NotificationType): string => {
         switch (type) {
             case 'success': return 'var(--success)';
             case 'error': return 'var(--error)';
@@ -111,8 +127,8 @@ export const NotificationProvider = ({ children }) => {
                                 opacity: 0.7,
                                 transition: 'opacity 0.2s'
                             }}
-                            onMouseEnter={(e) => e.currentTarget.style.opacity = 1}
-                            onMouseLeave={(e) => e.currentTarget.style.opacity = 0.7}
+                            onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
+                            onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.7')}
                         >
                             <X size={16} />
                         </button>

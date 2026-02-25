@@ -1,15 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Layers, LogOut, LogIn, Upload, Key, User, Moon, Sun } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import type { User as UserType } from '../../types';
 
-const Navbar = () => {
+const Navbar: React.FC = () => {
     const navigate = useNavigate();
     const token = localStorage.getItem('jwt_token');
-    const user = token ? JSON.parse(localStorage.getItem('user') || '{}') : null;
+    const user: UserType | null = token ? JSON.parse(localStorage.getItem('user') || '{}') : null;
     const isGuest = !token && sessionStorage.getItem('guest_mode') === 'true';
 
     // Initialize theme from DOM state (in case of re-render)
-    const [theme, setTheme] = useState(
+    const [theme, setTheme] = useState<'dark' | 'light'>(
         () => document.documentElement.classList.contains('light-theme') ? 'light' : 'dark'
     );
 
@@ -68,8 +69,8 @@ const Navbar = () => {
                         cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '0.5rem',
                         transition: 'color 0.2s', borderRadius: '50%'
                     }}
-                    onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text-primary)'}
-                    onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
+                    onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-primary)')}
+                    onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-secondary)')}
                     title="切换主题"
                 >
                     {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
@@ -109,8 +110,8 @@ const Navbar = () => {
                                     background: 'transparent', border: 'none', color: 'var(--text-secondary)',
                                     cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '0.5rem', marginLeft: '0.25rem'
                                 }}
-                                onMouseEnter={(e) => e.currentTarget.style.color = 'var(--error)'}
-                                onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
+                                onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--error)')}
+                                onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-secondary)')}
                                 title="退出登录"
                             >
                                 <LogOut size={18} />

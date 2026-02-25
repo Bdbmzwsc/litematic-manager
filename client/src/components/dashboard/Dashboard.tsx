@@ -4,15 +4,16 @@ import { Search, SlidersHorizontal, Loader2, Inbox } from 'lucide-react';
 import { api } from '../../lib/api';
 import Navbar from '../layout/Navbar';
 import SchematicCard from './SchematicCard';
+import type { Schematic, User } from '../../types';
 
-const Dashboard = () => {
-    const [schematics, setSchematics] = useState([]);
+const Dashboard: React.FC = () => {
+    const [schematics, setSchematics] = useState<Schematic[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
-    const [filter, setFilter] = useState('all'); // 'all' or 'my'
+    const [filter, setFilter] = useState<'all' | 'my'>('all');
 
     const token = localStorage.getItem('jwt_token');
-    const user = token ? JSON.parse(localStorage.getItem('user') || '{}') : null;
+    const user: User | null = token ? JSON.parse(localStorage.getItem('user') || '{}') : null;
     const isGuest = sessionStorage.getItem('guest_mode') === 'true';
 
     // Route Guard
@@ -24,10 +25,10 @@ const Dashboard = () => {
         fetchSchematics();
     }, []);
 
-    const fetchSchematics = async (query = '') => {
+    const fetchSchematics = async (query: string = '') => {
         setLoading(true);
         try {
-            const data = await api.schematics.search(query);
+            const data = await api.schematics.search(query) as Schematic[];
             setSchematics(data);
         } catch (error) {
             console.error('Failed to fetch schematics:', error);
@@ -36,7 +37,7 @@ const Dashboard = () => {
         }
     };
 
-    const handleSearch = (e) => {
+    const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         fetchSchematics(searchQuery);
     };

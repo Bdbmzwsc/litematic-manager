@@ -9,13 +9,14 @@ import { useNotification } from '../../contexts/NotificationContext';
 import { useConfirm } from '../../contexts/ConfirmContext';
 import ConfigModal from './ConfigModal';
 import AssemblyModal from './AssemblyModal';
+import type { Schematic, User } from '../../types';
 
-const SchematicDetail = () => {
-    const { id } = useParams();
+const SchematicDetail: React.FC = () => {
+    const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const { showNotification } = useNotification();
     const confirm = useConfirm();
-    const [schematic, setSchematic] = useState(null);
+    const [schematic, setSchematic] = useState<Schematic | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
@@ -40,17 +41,17 @@ const SchematicDetail = () => {
 
     // Get current user and determine if they can edit
     const token = localStorage.getItem('jwt_token');
-    const user = token ? JSON.parse(localStorage.getItem('user') || '{}') : null;
+    const user: User | null = token ? JSON.parse(localStorage.getItem('user') || '{}') : null;
     const canEdit = user && schematic && (user.role === 'admin' || user.id === schematic.user_id);
 
     useEffect(() => {
         const fetchSchematicDetail = async () => {
             try {
-                const data = await api.schematics.getById(id);
+                const data = await api.schematics.getById(id!) as Schematic;
                 setSchematic(data);
             } catch (err) {
                 console.error(err);
-                setError(err.message || '加载投影详情失败');
+                setError(err instanceof Error ? err.message : '加载投影详情失败');
             } finally {
                 setLoading(false);
             }
@@ -59,19 +60,19 @@ const SchematicDetail = () => {
     }, [id]);
 
     const handleEditStart = () => {
-        setEditContent(schematic.description || '');
+        setEditContent(schematic?.description || '');
         setIsEditing(true);
     };
 
     const handleEditSave = async () => {
         try {
             setSaving(true);
-            await api.schematics.update(id, { description: editContent });
-            setSchematic(prev => ({ ...prev, description: editContent }));
+            await api.schematics.update(id!, { description: editContent });
+            setSchematic(prev => prev ? { ...prev, description: editContent } : prev);
             setIsEditing(false);
         } catch (err) {
             console.error("Failed to save README", err);
-            alert("保存 README 失败: " + (err.message || '未知错误'));
+            alert("保存 README 失败: " + (err instanceof Error ? err.message : '未知错误'));
         } finally {
             setSaving(false);
         }
@@ -81,13 +82,13 @@ const SchematicDetail = () => {
         if (!editName.trim()) return showNotification("名称不能为空", 'error');
         try {
             setSavingName(true);
-            await api.schematics.update(id, { name: editName.trim() });
-            setSchematic(prev => ({ ...prev, name: editName.trim() }));
+            await api.schematics.update(id!, { name: editName.trim() });
+            setSchematic(prev => prev ? { ...prev, name: editName.trim() } : prev);
             setIsEditingName(false);
             showNotification('投影名称已更新', 'success');
         } catch (err) {
             console.error("Failed to save Name", err);
-            showNotification("保存名称失败: " + (err.message || '未知错误'), 'error');
+            showNotification("保存名称失败: " + (err instanceof Error ? err.message : '未知错误'), 'error');
         } finally {
             setSavingName(false);
         }
@@ -96,27 +97,27 @@ const SchematicDetail = () => {
     const handleEditVisibilitySave = async () => {
         try {
             setSavingVisibility(true);
-            await api.schematics.update(id, { is_public: editVisibility });
-            setSchematic(prev => ({ ...prev, is_public: editVisibility }));
+            await api.schematics.update(id!, { is_public: editVisibility });
+            setSchematic(prev => prev ? { ...prev, is_public: editVisibility } : prev);
             setIsEditingVisibility(false);
-            showNotification(`可见性已更改为 ${editVisibility === 'true' ? 'public' : 'private'}`, 'success');
+            showNotification(`可见性已更改为 ${editVisibility ? 'public' : 'private'}`, 'success');
         } catch (err) {
             console.error("Failed to save Visibility", err);
-            showNotification("保存可见性失败: " + (err.message || '未知错误'), 'error');
+            showNotification("保存可见性失败: " + (err instanceof Error ? err.message : '未知错误'), 'error');
         } finally {
             setSavingVisibility(false);
         }
     };
 
     const handleDownloadClick = () => {
-        if (schematic.schematic_type === 1) {
+        if (schematic?.schematic_type === 1) {
             setShowAssemblyModal(true);
         } else {
             executeDownload();
         }
     };
 
-    const executeDownload = (x, z) => {
+    const executeDownload = (x?: number, z?: number) => {
         const token = localStorage.getItem('jwt_token');
 
         let url = `/api/schematics/${id}/download`;
@@ -165,7 +166,7 @@ const SchematicDetail = () => {
                 document.body.removeChild(a);
 
                 // Optimistically update download count in UI
-                setSchematic(prev => ({ ...prev, download_count: (prev.download_count || 0) + 1 }));
+                setSchematic(prev => prev ? { ...prev, download_count: (prev.download_count || 0) + 1 } : prev);
                 if (showAssemblyModal) setShowAssemblyModal(false);
             })
             .catch(err => {
@@ -175,6 +176,7 @@ const SchematicDetail = () => {
     };
 
     const handleDelete = async () => {
+        if (!schematic) return;
         const ok = await confirm({
             title: '删除投影？',
             description: <>确定要删除 <strong style={{ color: 'var(--text-primary)' }}>{schematic.name}</strong> 吗？此操作无法撤销。</>,
@@ -183,12 +185,12 @@ const SchematicDetail = () => {
         });
         if (!ok) return;
         try {
-            await api.schematics.delete(id);
+            await api.schematics.delete(id!);
             showNotification(`投影 "${schematic.name}" 已成功删除`, 'success');
             navigate('/', { replace: true });
         } catch (err) {
             console.error("Delete error:", err);
-            showNotification(err.message || "删除投影失败", 'error');
+            showNotification(err instanceof Error ? err.message : "删除投影失败", 'error');
         }
     };
 
@@ -244,8 +246,8 @@ const SchematicDetail = () => {
                         marginBottom: '1.5rem', fontSize: '0.9rem', padding: 0, fontWeight: '500',
                         transition: 'color 0.2s'
                     }}
-                    onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
-                    onMouseLeave={e => e.currentTarget.style.color = 'var(--text-secondary)'}
+                    onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-primary)')}
+                    onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
                 >
                     <ChevronLeft size={16} />
                     返回
@@ -542,7 +544,7 @@ const SchematicDetail = () => {
                 <ConfigModal
                     schematic={schematic}
                     onClose={() => setShowConfigModal(false)}
-                    onUpdate={(newType) => setSchematic(prev => ({ ...prev, schematic_type: newType }))}
+                    onUpdate={(newType) => setSchematic(prev => prev ? { ...prev, schematic_type: newType } : prev)}
                 />
             )}
 

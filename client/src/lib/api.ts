@@ -1,10 +1,16 @@
+import type { UploadOptions } from '../types';
+
 const API_BASE = '/api';
 
+interface FetchOptions extends RequestInit {
+    headers?: Record<string, string>;
+}
+
 export const api = {
-    async fetch(endpoint, options = {}) {
+    async fetch<T = unknown>(endpoint: string, options: FetchOptions = {}): Promise<T> {
         const token = localStorage.getItem('jwt_token');
 
-        const headers = {
+        const headers: Record<string, string> = {
             'Content-Type': 'application/json',
             ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
             ...options.headers,
@@ -20,17 +26,17 @@ export const api = {
             throw new Error(errorData.error || response.statusText || 'Unknown Error');
         }
 
-        return response.json();
+        return response.json() as Promise<T>;
     },
 
     auth: {
-        async login(username, password) {
-            return api.fetch('/auth/login', {
+        async login(username: string, password: string) {
+            return api.fetch<{ token: string; user: { id: number; username: string; email: string; role: string } }>('/auth/login', {
                 method: 'POST',
                 body: JSON.stringify({ username, password }),
             });
         },
-        async register(username, email, password, invitationCode) {
+        async register(username: string, email: string, password: string, invitationCode: string) {
             return api.fetch('/auth/register', {
                 method: 'POST',
                 body: JSON.stringify({ username, email, password, invitationCode }),
@@ -45,25 +51,25 @@ export const api = {
         async getAll() {
             return api.fetch('/schematics');
         },
-        async search(query) {
+        async search(query: string) {
             if (!query) return this.getAll();
             return api.fetch(`/schematics/search?q=${encodeURIComponent(query)}`);
         },
-        async getById(id) {
+        async getById(id: string | number) {
             return api.fetch(`/schematics/${id}`);
         },
-        async update(id, data) {
+        async update(id: string | number, data: Record<string, unknown>) {
             return api.fetch(`/schematics/${id}`, {
                 method: 'PUT',
                 body: JSON.stringify(data),
             });
         },
-        async delete(id) {
+        async delete(id: string | number) {
             return api.fetch(`/schematics/${id}`, {
                 method: 'DELETE',
             });
         },
-        async upload(file, options = {}) {
+        async upload(file: File, options: UploadOptions = {}) {
             const token = localStorage.getItem('jwt_token');
             const formData = new FormData();
             formData.append('file', file);
@@ -72,7 +78,7 @@ export const api = {
                 formData.append('description', options.description);
             }
             if (options.type !== undefined) {
-                formData.append('type', options.type);
+                formData.append('type', String(options.type));
             }
             if (options.config !== undefined) {
                 formData.append('config', typeof options.config === 'string' ? options.config : JSON.stringify(options.config));
@@ -93,10 +99,10 @@ export const api = {
 
             return response.json();
         },
-        async getConfig(id) {
-            return api.fetch(`/schematics/${id}/config`);
+        async getConfig(id: string | number) {
+            return api.fetch<{ type: number; config: unknown[] }>(`/schematics/${id}/config`);
         },
-        async updateConfig(id, data) {
+        async updateConfig(id: string | number, data: { type: number; config: unknown[] }) {
             return api.fetch(`/schematics/${id}/config`, {
                 method: 'PUT',
                 body: JSON.stringify(data),
@@ -108,13 +114,13 @@ export const api = {
         async getAll() {
             return api.fetch('/invitations');
         },
-        async create(data) {
-            return api.fetch('/invitations', {
+        async create(data: { expiresInHours: number; maxUses: number }) {
+            return api.fetch<{ invitation: { code: string } }>('/invitations', {
                 method: 'POST',
                 body: JSON.stringify(data),
             });
         },
-        async delete(code) {
+        async delete(code: string) {
             return api.fetch(`/invitations/${code}`, {
                 method: 'DELETE',
             });

@@ -3,21 +3,22 @@ import { useNavigate } from 'react-router-dom';
 import { Upload, FileBox, CheckCircle, AlertCircle, Loader2, ChevronLeft, X } from 'lucide-react';
 import { api } from '../../lib/api';
 import Navbar from '../layout/Navbar';
+import type { UploadResult } from '../../types';
 
-const UploadPage = () => {
+const UploadPage: React.FC = () => {
     const navigate = useNavigate();
-    const fileInputRef = useRef(null);
-    const [file, setFile] = useState(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [file, setFile] = useState<File | null>(null);
     const [dragActive, setDragActive] = useState(false);
     const [uploading, setUploading] = useState(false);
-    const [uploadResult, setUploadResult] = useState(null); // { success: bool, message: string, id?: number }
+    const [uploadResult, setUploadResult] = useState<UploadResult | null>(null);
 
     // New Fields State
     const [description, setDescription] = useState('');
     const [type, setType] = useState('0'); // '0' or '1'
     const [configStr, setConfigStr] = useState('[\n  {\n    "name": "region_name",\n    "position": ["0", "0", "0"],\n    "generate_direct": "+x"\n  }\n]');
 
-    const handleDrag = (e) => {
+    const handleDrag = (e: React.DragEvent<HTMLDivElement>) => {
         e.preventDefault();
         e.stopPropagation();
         if (e.type === 'dragenter' || e.type === 'dragover') {
@@ -27,7 +28,7 @@ const UploadPage = () => {
         }
     };
 
-    const handleDrop = (e) => {
+    const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
         e.preventDefault();
         e.stopPropagation();
         setDragActive(false);
@@ -36,13 +37,13 @@ const UploadPage = () => {
         }
     };
 
-    const handleFileChange = (e) => {
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             validateAndSetFile(e.target.files[0]);
         }
     };
 
-    const validateAndSetFile = (f) => {
+    const validateAndSetFile = (f: File) => {
         setUploadResult(null);
         if (!f.name.endsWith('.litematic')) {
             setUploadResult({ success: false, message: '仅支持 .litematic 文件' });
@@ -54,7 +55,7 @@ const UploadPage = () => {
     const handleUpload = async () => {
         if (!file) return;
 
-        let parsedConfig = [];
+        let parsedConfig: unknown[] = [];
         if (type === '1') {
             try {
                 parsedConfig = JSON.parse(configStr);
@@ -62,7 +63,7 @@ const UploadPage = () => {
                     throw new Error('配置必须是一个 JSON 数组');
                 }
             } catch (e) {
-                setUploadResult({ success: false, message: `配置 JSON 格式错误: ${e.message}` });
+                setUploadResult({ success: false, message: `配置 JSON 格式错误: ${e instanceof Error ? e.message : String(e)}` });
                 return;
             }
         }
@@ -74,7 +75,7 @@ const UploadPage = () => {
                 description,
                 type: parseInt(type),
                 config: parsedConfig
-            });
+            }) as { name?: string; id?: number };
             setUploadResult({
                 success: true,
                 message: `"${result.name || file.name}" 上传成功`,
@@ -85,7 +86,7 @@ const UploadPage = () => {
             setType('0');
         } catch (err) {
             console.error('Upload error:', err);
-            setUploadResult({ success: false, message: err.message || '上传失败，请重试' });
+            setUploadResult({ success: false, message: err instanceof Error ? err.message : '上传失败，请重试' });
         } finally {
             setUploading(false);
         }
@@ -113,8 +114,8 @@ const UploadPage = () => {
                         marginBottom: '1.5rem', fontSize: '0.9rem', padding: 0, fontWeight: '500',
                         transition: 'color 0.2s'
                     }}
-                    onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
-                    onMouseLeave={e => e.currentTarget.style.color = 'var(--text-secondary)'}
+                    onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-primary)')}
+                    onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
                 >
                     <ChevronLeft size={16} />
                     返回
@@ -234,7 +235,7 @@ const UploadPage = () => {
                                                 padding: '0.75rem', fontSize: '0.85rem',
                                                 fontFamily: 'ui-monospace, SFMono-Regular, Consolas, monospace'
                                             }}
-                                            spellCheck="false"
+                                            spellCheck={false}
                                         />
                                     </div>
                                 )}

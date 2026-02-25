@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { User, Lock, Mail, Key, UserPlus, Loader2 } from 'lucide-react';
 import { api } from '../../lib/api';
 
-const RegisterForm = () => {
+const RegisterForm: React.FC = () => {
     const [formData, setFormData] = useState({
         username: '',
         email: '',
@@ -16,7 +16,7 @@ const RegisterForm = () => {
     const [success, setSuccess] = useState('');
     const navigate = useNavigate();
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setError('');
         setSuccess('');
@@ -37,13 +37,13 @@ const RegisterForm = () => {
             setSuccess('注册成功！您现在可以登录了。');
             setTimeout(() => navigate('/login'), 2000);
         } catch (err) {
-            setError(err.message || '注册失败，请稍后重试。');
+            setError(err instanceof Error ? err.message : '注册失败，请稍后重试。');
         } finally {
             setLoading(false);
         }
     };
 
-    const handleChange = (e) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
     };
 

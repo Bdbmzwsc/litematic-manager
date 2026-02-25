@@ -1,15 +1,33 @@
 import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
 import { Trash2, AlertTriangle, X } from 'lucide-react';
+import type { ConfirmOptions } from '../types';
 
-const ConfirmContext = createContext(null);
+interface DialogState {
+    title: string;
+    description: React.ReactNode;
+    confirmLabel: string;
+    cancelLabel: string;
+    variant: 'danger' | 'warning' | 'default';
+    icon: React.ReactNode;
+}
 
-export const useConfirm = () => {
+interface ConfirmContextType {
+    confirm: (options?: ConfirmOptions) => Promise<boolean>;
+}
+
+const ConfirmContext = createContext<ConfirmContextType | null>(null);
+
+export const useConfirm = (): ((options?: ConfirmOptions) => Promise<boolean>) => {
     const context = useContext(ConfirmContext);
     if (!context) {
         throw new Error('useConfirm must be used within a ConfirmProvider');
     }
     return context.confirm;
 };
+
+interface ConfirmProviderProps {
+    children: React.ReactNode;
+}
 
 /**
  * ConfirmProvider
@@ -26,11 +44,11 @@ export const useConfirm = () => {
  *   });
  *   if (ok) { ... }
  */
-export const ConfirmProvider = ({ children }) => {
-    const [dialog, setDialog] = useState(null);
-    const resolverRef = useRef(null);
+export const ConfirmProvider: React.FC<ConfirmProviderProps> = ({ children }) => {
+    const [dialog, setDialog] = useState<DialogState | null>(null);
+    const resolverRef = useRef<((value: boolean) => void) | null>(null);
 
-    const confirm = useCallback((options = {}) => {
+    const confirm = useCallback((options: ConfirmOptions = {}): Promise<boolean> => {
         return new Promise((resolve) => {
             resolverRef.current = resolve;
             setDialog({
@@ -54,7 +72,7 @@ export const ConfirmProvider = ({ children }) => {
         setDialog(null);
     };
 
-    const getAccentColor = (variant) => {
+    const getAccentColor = (variant: string): string => {
         switch (variant) {
             case 'danger': return 'var(--error)';
             case 'warning': return '#f59e0b';
@@ -62,7 +80,7 @@ export const ConfirmProvider = ({ children }) => {
         }
     };
 
-    const getIconBg = (variant) => {
+    const getIconBg = (variant: string): string => {
         switch (variant) {
             case 'danger': return 'var(--error-bg)';
             case 'warning': return 'rgba(245, 158, 11, 0.15)';
@@ -70,7 +88,7 @@ export const ConfirmProvider = ({ children }) => {
         }
     };
 
-    const getDefaultIcon = (variant) => {
+    const getDefaultIcon = (variant: string): React.ReactNode => {
         switch (variant) {
             case 'danger': return <Trash2 size={28} />;
             case 'warning': return <AlertTriangle size={28} />;
@@ -121,8 +139,8 @@ export const ConfirmProvider = ({ children }) => {
                                 borderRadius: 'var(--radius-sm)',
                                 transition: 'color 0.2s',
                             }}
-                            onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
-                            onMouseLeave={e => e.currentTarget.style.color = 'var(--text-secondary)'}
+                            onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-primary)')}
+                            onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
                         >
                             <X size={18} />
                         </button>

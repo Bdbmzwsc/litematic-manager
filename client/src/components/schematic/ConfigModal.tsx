@@ -1,23 +1,30 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Check, Loader2, Settings } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useNotification } from '../../contexts/NotificationContext';
+import type { Schematic } from '../../types';
 
-const ConfigModal = ({ schematic, onClose, onUpdate }) => {
+interface ConfigModalProps {
+    schematic: Schematic;
+    onClose: () => void;
+    onUpdate: (newType: number) => void;
+}
+
+const ConfigModal: React.FC<ConfigModalProps> = ({ schematic, onClose, onUpdate }) => {
     const { showNotification } = useNotification();
     const [type, setType] = useState(schematic.schematic_type?.toString() || '0');
     const [configStr, setConfigStr] = useState('');
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
 
-    React.useEffect(() => {
+    useEffect(() => {
         const fetchConfig = async () => {
             try {
                 const data = await api.schematics.getConfig(schematic.id);
                 setType(data.type.toString());
                 setConfigStr(JSON.stringify(data.config, null, 2));
             } catch (err) {
-                showNotification('加载配置失败: ' + err.message, 'error');
+                showNotification('加载配置失败: ' + (err instanceof Error ? err.message : String(err)), 'error');
                 onClose();
             } finally {
                 setLoading(false);
@@ -27,7 +34,7 @@ const ConfigModal = ({ schematic, onClose, onUpdate }) => {
     }, [schematic.id, onClose, showNotification]);
 
     const handleSave = async () => {
-        let parsedConfig = [];
+        let parsedConfig: unknown[] = [];
         if (type === '1') {
             try {
                 parsedConfig = JSON.parse(configStr);
@@ -35,7 +42,7 @@ const ConfigModal = ({ schematic, onClose, onUpdate }) => {
                     throw new Error('配置必须是一个 JSON 数组');
                 }
             } catch (e) {
-                showNotification(`配置错误: ${e.message}`, 'error');
+                showNotification(`配置错误: ${e instanceof Error ? e.message : String(e)}`, 'error');
                 return;
             }
         }
@@ -50,7 +57,7 @@ const ConfigModal = ({ schematic, onClose, onUpdate }) => {
             onUpdate(parseInt(type));
             onClose();
         } catch (err) {
-            showNotification('保存失败: ' + err.message, 'error');
+            showNotification('保存失败: ' + (err instanceof Error ? err.message : String(err)), 'error');
         } finally {
             setSaving(false);
         }
@@ -125,7 +132,7 @@ const ConfigModal = ({ schematic, onClose, onUpdate }) => {
                                         width: '100%', minHeight: '200px', resize: 'vertical',
                                         padding: '0.75rem', fontFamily: 'monospace', fontSize: '0.85rem'
                                     }}
-                                    spellCheck="false"
+                                    spellCheck={false}
                                 />
                             </div>
                         )}

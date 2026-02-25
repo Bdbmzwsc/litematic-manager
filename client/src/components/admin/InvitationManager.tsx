@@ -5,21 +5,22 @@ import { api } from '../../lib/api';
 import Navbar from '../layout/Navbar';
 import { useNotification } from '../../contexts/NotificationContext';
 import { useConfirm } from '../../contexts/ConfirmContext';
+import type { Invitation, User } from '../../types';
 
-const InvitationManager = () => {
+const InvitationManager: React.FC = () => {
     const navigate = useNavigate();
     const { showNotification } = useNotification();
     const confirm = useConfirm();
     const token = localStorage.getItem('jwt_token');
-    const user = token ? JSON.parse(localStorage.getItem('user') || '{}') : null;
+    const user: User | null = token ? JSON.parse(localStorage.getItem('user') || '{}') : null;
 
-    const [invitations, setInvitations] = useState([]);
+    const [invitations, setInvitations] = useState<Invitation[]>([]);
     const [loading, setLoading] = useState(true);
     const [generating, setGenerating] = useState(false);
 
     // Form state
-    const [expiresInHours, setExpiresInHours] = useState(24);
-    const [maxUses, setMaxUses] = useState(1);
+    const [expiresInHours, setExpiresInHours] = useState<number | string>(24);
+    const [maxUses, setMaxUses] = useState<number | string>(1);
 
     useEffect(() => {
         // Strict admin check
@@ -34,16 +35,16 @@ const InvitationManager = () => {
     const fetchInvitations = async () => {
         try {
             setLoading(true);
-            const data = await api.invitations.getAll();
+            const data = await api.invitations.getAll() as Invitation[];
             setInvitations(data);
         } catch (err) {
-            showNotification(err.message || '获取邀请码失败', 'error');
+            showNotification(err instanceof Error ? err.message : '获取邀请码失败', 'error');
         } finally {
             setLoading(false);
         }
     };
 
-    const handleCreate = async (e) => {
+    const handleCreate = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         try {
             setGenerating(true);
@@ -54,13 +55,13 @@ const InvitationManager = () => {
             showNotification(`已成功生成邀请码 ${res.invitation.code}！`, 'success');
             fetchInvitations(); // Refresh list
         } catch (err) {
-            showNotification(err.message || '生成邀请码失败', 'error');
+            showNotification(err instanceof Error ? err.message : '生成邀请码失败', 'error');
         } finally {
             setGenerating(false);
         }
     };
 
-    const handleDelete = async (code) => {
+    const handleDelete = async (code: string) => {
         const ok = await confirm({
             title: '删除邀请码？',
             description: <>确定要删除邀请码 <strong style={{ color: 'var(--text-primary)' }}>{code}</strong> 吗？此操作无法撤销。</>,
@@ -73,18 +74,18 @@ const InvitationManager = () => {
             showNotification(`邀请码 ${code} 已删除。`, 'success');
             setInvitations(prev => prev.filter(inv => inv.code !== code));
         } catch (err) {
-            showNotification(err.message || '删除邀请码失败', 'error');
+            showNotification(err instanceof Error ? err.message : '删除邀请码失败', 'error');
         }
     };
 
-    const handleCopy = (code) => {
+    const handleCopy = (code: string) => {
         navigator.clipboard.writeText(code);
         showNotification('邀请码已复制到剪贴板！', 'success');
     };
 
     // Calculate time remaining for display
-    const getTimeRemaining = (expiresAt) => {
-        const diff = new Date(expiresAt) - new Date();
+    const getTimeRemaining = (expiresAt: string): string => {
+        const diff = new Date(expiresAt).getTime() - new Date().getTime();
         if (diff <= 0) return '已过期';
         const hours = Math.floor(diff / (1000 * 60 * 60));
         const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
@@ -92,7 +93,7 @@ const InvitationManager = () => {
         return `剩余 ${hours}小时 ${minutes}分钟`;
     };
 
-    const getStatusStyle = (status) => {
+    const getStatusStyle = (status: string): { bg: string; color: string; border: string } => {
         switch (status) {
             case 'active':
                 return { bg: 'var(--success-bg)', color: 'var(--success)', border: 'var(--success)' };
@@ -105,7 +106,7 @@ const InvitationManager = () => {
         }
     };
 
-    const formatStatus = (status) => {
+    const formatStatus = (status: string): string => {
         if (status === 'used_up') return '已用完';
         if (status === 'expired') return '已过期';
         if (status === 'active') return '有效';
@@ -132,8 +133,8 @@ const InvitationManager = () => {
                                 marginBottom: '1rem', fontSize: '0.9rem', padding: 0, fontWeight: '500',
                                 transition: 'color 0.2s'
                             }}
-                            onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
-                            onMouseLeave={e => e.currentTarget.style.color = 'var(--text-secondary)'}
+                            onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-primary)')}
+                            onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
                         >
                             <ChevronLeft size={16} />
                             返回
