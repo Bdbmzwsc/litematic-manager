@@ -512,7 +512,14 @@ const SchematicDetail: React.FC = () => {
                                 ) : (
                                     <div className="markdown-body" style={{ color: 'var(--text-secondary)', lineHeight: 1.7, fontSize: '0.95rem' }}>
                                         {schematic.description ? (
-                                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                            <ReactMarkdown
+                                                remarkPlugins={[remarkGfm]}
+                                                components={{
+                                                    img: ({ node, ...props }) => (
+                                                        <img {...props} style={{ maxWidth: '100%', height: 'auto', borderRadius: 'var(--radius-md)', margin: '1rem 0' }} />
+                                                    )
+                                                }}
+                                            >
                                                 {schematic.description}
                                             </ReactMarkdown>
                                         ) : (
