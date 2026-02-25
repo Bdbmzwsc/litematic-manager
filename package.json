@@ -1,11 +1,14 @@
 {
   "name": "litematic-server",
   "version": "1.0.0",
+  "type": "module",
   "description": "Minecraft原理图管理系统",
-  "main": "server/app.js",
+  "main": "server/app.ts",
   "scripts": {
-    "start": "node server/app.js",
-    "dev": "nodemon server/app.js"
+    "start": "node --import tsx server/app.ts",
+    "dev": "tsx watch server/app.ts",
+    "build": "tsc -p server/tsconfig.json",
+    "typecheck": "tsc -p server/tsconfig.json --noEmit"
   },
   "dependencies": {
     "axios": "^1.4.0",
@@ -25,6 +28,14 @@
     "uuid": "^9.0.0"
   },
   "devDependencies": {
-    "nodemon": "^3.0.1"
+    "@types/bcrypt": "^6.0.0",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/multer": "^2.0.0",
+    "@types/node": "^25.3.0",
+    "@types/uuid": "^10.0.0",
+    "nodemon": "^3.0.1",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
   }
 }
