@@ -49,7 +49,11 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
     res.status(500).json({ error: '服务器内部错误' });
 });
 
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-    console.log(`服务器运行在端口 ${PORT}`);
-});
+export { app };
+
+if (process.env.NODE_ENV !== 'test') {
+    const PORT = process.env.PORT || 3001;
+    app.listen(PORT, () => {
+        console.log(`服务器运行在端口 ${PORT}`);
+    });
+}

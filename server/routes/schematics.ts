@@ -1,5 +1,6 @@
 import express from 'express';
 import multer from 'multer';
+import crypto from 'crypto';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -22,22 +23,10 @@ const storage = multer.diskStorage({
     destination: function (_req, _file, cb) {
         cb(null, uploadDir);
     },
-    filename: function (_req, file, cb) {
-        try {
-            const originalName = Buffer.from(file.originalname, 'latin1').toString('utf8');
-            console.log('原始文件名:', file.originalname);
-            console.log('转换后文件名:', originalName);
-
-            const cleanName = originalName.split(/[/\\]/).pop()!;
-            const timestamp = Date.now();
-            const fileName = `${timestamp}_${cleanName}`;
-
-            console.log('最终保存文件名:', fileName);
-            cb(null, fileName);
-        } catch (error) {
-            console.error('文件名处理错误:', error);
-            cb(null, `${Date.now()}.litematic`);
-        }
+    filename: function (_req, _file, cb) {
+        const timestamp = Date.now();
+        const randomHex = crypto.randomBytes(8).toString('hex');
+        cb(null, `${timestamp}_${randomHex}.litematic`);
     }
 });
 
@@ -55,6 +44,7 @@ const router = express.Router();
 
 // 需要登录的路由
 router.post('/upload', validateToken, upload.single('file'), schematicController.uploadSchematic);
+router.put('/:id/upload', validateToken, upload.single('file'), schematicController.reuploadSchematic);
 router.delete('/:id', validateToken, schematicController.deleteSchematic);
 router.put('/:id', validateToken, schematicController.updateSchematic);
 

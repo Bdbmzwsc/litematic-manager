@@ -394,6 +394,80 @@ const schematicController = {
         }
     },
 
+    async reuploadSchematic(req: AuthenticatedRequest, res: Response): Promise<void> {
+        if (!req.user) {
+            res.status(401).json({ error: '需要登录' });
+            return;
+        }
+
+        try {
+            const id = req.params.id as string;
+            const userId = req.user.id;
+            const isAdmin = req.user.role === 'admin';
+
+            // 查询投影
+            const [schematics] = await pool.query<SchematicRecord[]>(
+                'SELECT * FROM schematics WHERE id = ?', [id]
+            );
+
+            if (schematics.length === 0) {
+                res.status(404).json({ error: '原理图不存在' });
+                if (req.file) fs.unlinkSync(req.file.path);
+                return;
+            }
+
+            const schematic = schematics[0];
+
+            // 鉴权：仅上传者或管理员
+            if (schematic.user_id !== userId && !isAdmin) {
+                res.status(403).json({ error: '没有权限修改此投影文件' });
+                if (req.file) fs.unlinkSync(req.file.path);
+                return;
+            }
+
+            // 检查是否为新格式（有 folder_name）
+            if (!schematic.folder_name) {
+                res.status(400).json({ error: '旧格式投影不支持重新上传' });
+                if (req.file) fs.unlinkSync(req.file.path);
+                return;
+            }
+
+            const file = req.file;
+            if (!file) {
+                res.status(400).json({ error: '未提供文件' });
+                return;
+            }
+
+            const folderPath = path.join(__dirname, '../uploads', schematic.folder_name);
+            const sourcePath = path.join(folderPath, 'source.litematic');
+
+            // 替换源文件
+            fs.renameSync(file.path, sourcePath);
+            console.log(`投影文件已替换: ${sourcePath}`);
+
+            // 重新处理（生成视图和材料）
+            try {
+                console.log('重新处理投影视图和材料...');
+                await processLitematicFile(sourcePath, folderPath);
+                console.log('重新处理完成');
+            } catch (error) {
+                console.error('重新处理视图失败:', error);
+            }
+
+            // 返回更新后的信息
+            const [updated] = await pool.query<SchematicRecord[]>(
+                `SELECT s.*, u.username as creator_name 
+                 FROM schematics s JOIN users u ON s.user_id = u.id 
+                 WHERE s.id = ?`, [id]
+            );
+
+            res.json(updated[0] || { id });
+        } catch (error) {
+            console.error('重新上传失败:', error);
+            res.status(500).json({ error: '重新上传失败' });
+        }
+    },
+
     async getFrontView(req: AuthenticatedRequest, res: Response): Promise<void> {
         await checkAccessAndServeFile(req, res, 'front_view_path');
     },
