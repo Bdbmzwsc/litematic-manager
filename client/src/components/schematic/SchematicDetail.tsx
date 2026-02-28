@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Download, Share2, Clock, User as UserIcon, Shield, ChevronLeft, Loader2, FileBox, Pencil, Check, X, Trash2, Settings } from 'lucide-react';
+import { Download, Share2, Clock, User as UserIcon, Shield, ChevronLeft, Loader2, FileBox, Pencil, Check, X, Trash2, Settings, Upload } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { api } from '../../lib/api';
@@ -175,6 +175,11 @@ const SchematicDetail: React.FC = () => {
             });
     };
 
+    const handleShare = () => {
+        navigator.clipboard.writeText(window.location.href);
+        showNotification('链接已复制到剪贴板！', 'success');
+    };
+
     const handleDelete = async () => {
         if (!schematic) return;
         const ok = await confirm({
@@ -192,11 +197,6 @@ const SchematicDetail: React.FC = () => {
             console.error("Delete error:", err);
             showNotification(err instanceof Error ? err.message : "删除投影失败", 'error');
         }
-    };
-
-    const handleShare = () => {
-        navigator.clipboard.writeText(window.location.href);
-        showNotification('链接已复制到剪贴板！', 'success');
     };
 
     if (loading) {
@@ -254,8 +254,9 @@ const SchematicDetail: React.FC = () => {
                 </button>
 
                 {/* PyPI Style Top Header */}
-                <div className="glass-panel animate-fade-in" style={{ padding: '2.5rem', marginBottom: '2rem', position: 'relative', overflow: 'hidden' }}>
-                    <div style={{ position: 'relative', zIndex: 2, display: 'flex', flexWrap: 'wrap', gap: '2rem', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div className="glass-panel animate-fade-in" style={{ padding: '2.5rem', marginBottom: '2rem' }}>
+
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem', justifyContent: 'space-between', alignItems: 'flex-start' }}>
 
                         <div style={{ flex: '1 1 min-content' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
@@ -314,37 +315,30 @@ const SchematicDetail: React.FC = () => {
 
                         {/* Action Buttons */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', minWidth: '240px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                                <button
+                                    className="glass-button secondary hover-only"
+                                    onClick={handleShare}
+                                    style={{ padding: '0.5rem', width: 'auto' }}
+                                    title="分享投影链接"
+                                >
+                                    <Share2 size={18} />
+                                </button>
+                                {canEdit && (
+                                    <button
+                                        className="glass-button secondary hover-only"
+                                        onClick={() => setShowConfigModal(true)}
+                                        style={{ padding: '0.5rem', width: 'auto' }}
+                                        title="投影配置与管理"
+                                    >
+                                        <Settings size={18} />
+                                    </button>
+                                )}
+                            </div>
                             <button className="glass-button" onClick={handleDownloadClick} style={{ padding: '1rem', fontSize: '1.05rem' }}>
                                 <Download size={20} />
                                 下载文件
                             </button>
-                            <button className="glass-button secondary" onClick={handleShare}>
-                                <Share2 size={18} />
-                                分享投影
-                            </button>
-
-                            {canEdit && (
-                                <>
-                                    <button
-                                        className="glass-button secondary"
-                                        onClick={() => setShowConfigModal(true)}
-                                        style={{ border: '1px solid var(--glass-border)' }}
-                                    >
-                                        <Settings size={18} />
-                                        投影配置
-                                    </button>
-
-                                    <button
-                                        className="glass-button secondary"
-                                        onClick={handleDelete}
-                                        style={{ color: 'var(--error)', border: '1px solid rgba(239, 68, 68, 0.3)' }}
-                                        title="删除投影"
-                                    >
-                                        <Trash2 size={18} />
-                                        删除投影
-                                    </button>
-                                </>
-                            )}
                         </div>
                     </div>
                 </div>
@@ -552,6 +546,15 @@ const SchematicDetail: React.FC = () => {
                     schematic={schematic}
                     onClose={() => setShowConfigModal(false)}
                     onUpdate={(newType) => setSchematic(prev => prev ? { ...prev, schematic_type: newType } : prev)}
+                    onDelete={handleDelete}
+                    onRefresh={async () => {
+                        try {
+                            const data = await api.schematics.getById(id!) as Schematic;
+                            setSchematic(data);
+                        } catch (err) {
+                            console.error("Failed to refresh schematic data", err);
+                        }
+                    }}
                 />
             )}
 

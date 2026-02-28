@@ -99,6 +99,26 @@ export const api = {
 
             return response.json();
         },
+        async reupload(id: string | number, file: File) {
+            const token = localStorage.getItem('jwt_token');
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const response = await fetch(`${API_BASE}/schematics/${id}/upload`, {
+                method: 'PUT',
+                headers: {
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+                },
+                body: formData,
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || response.statusText || 'Re-upload failed');
+            }
+
+            return response.json();
+        },
         async getConfig(id: string | number) {
             return api.fetch<{ type: number; config: unknown[] }>(`/schematics/${id}/config`);
         },
