@@ -254,7 +254,7 @@ const SchematicDetail: React.FC = () => {
                 </button>
 
                 {/* PyPI Style Top Header */}
-                <div className="glass-panel animate-fade-in" style={{ padding: '2.5rem', marginBottom: '2rem' }}>
+                <div className="glass-panel animate-fade-in" style={{ padding: '2.5rem', marginBottom: '2rem', position: 'relative' }}>
 
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem', justifyContent: 'space-between', alignItems: 'flex-start' }}>
 
@@ -314,8 +314,8 @@ const SchematicDetail: React.FC = () => {
                         </div>
 
                         {/* Action Buttons */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', minWidth: '240px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', minWidth: '240px', justifyContent: 'flex-end', marginTop: '2.5rem' }}>
+                            <div style={{ position: 'absolute', top: '1.25rem', right: '1.25rem', display: 'flex', gap: '0.5rem' }}>
                                 <button
                                     className="glass-button secondary hover-only"
                                     onClick={handleShare}
