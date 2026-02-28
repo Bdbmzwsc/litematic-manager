@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Download, Share2, Clock, User as UserIcon, Shield, ChevronLeft, Loader2, FileBox, Pencil, Check, X, Trash2, Settings, Upload } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
+import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
 import { api } from '../../lib/api';
 import Navbar from '../layout/Navbar';
 import { useNotification } from '../../contexts/NotificationContext';
@@ -508,6 +510,18 @@ const SchematicDetail: React.FC = () => {
                                         {schematic.description ? (
                                             <ReactMarkdown
                                                 remarkPlugins={[remarkGfm]}
+                                                rehypePlugins={[
+                                                    rehypeRaw,
+                                                    [rehypeSanitize, {
+                                                        ...defaultSchema,
+                                                        tagNames: [...(defaultSchema.tagNames || []), 'video', 'source'],
+                                                        attributes: {
+                                                            ...defaultSchema.attributes,
+                                                            video: ['src', 'controls', 'width', 'height', 'autoPlay', 'loop', 'muted', 'poster', 'preload', 'style'],
+                                                            source: ['src', 'type']
+                                                        }
+                                                    }]
+                                                ]}
                                                 components={{
                                                     img: ({ node, ...props }) => (
                                                         <img {...props} style={{ maxWidth: '100%', height: 'auto', borderRadius: 'var(--radius-md)', margin: '1rem 0' }} />
