@@ -506,7 +506,7 @@ const SchematicDetail: React.FC = () => {
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className="markdown-body" style={{ color: 'var(--text-secondary)', lineHeight: 1.7, fontSize: '0.95rem' }}>
+                                    <div className="markdown-body" style={{ color: 'var(--text-secondary)', lineHeight: 1.7, fontSize: '0.95rem', overflow: 'hidden', maxWidth: '100%', wordBreak: 'break-word' }}>
                                         {schematic.description ? (
                                             <ReactMarkdown
                                                 remarkPlugins={[remarkGfm]}

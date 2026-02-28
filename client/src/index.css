@@ -359,3 +359,23 @@ a:hover {
   color: var(--text-primary);
   padding: 0;
 }
+
+/* Contain all elements inside markdown-body */
+.markdown-body img,
+.markdown-body video {
+  max-width: 100%;
+  height: auto;
+}
+
+.markdown-body table {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  display: block;
+  border-collapse: collapse;
+}
+
+.markdown-body * {
+  max-width: 100%;
+  box-sizing: border-box;
+}
