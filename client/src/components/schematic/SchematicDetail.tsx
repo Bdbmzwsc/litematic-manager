@@ -136,11 +136,6 @@ const SchematicDetail: React.FC = () => {
         // if they are authorized by default (public schematics).
 
         // Let's do the robust Blob approach to ensure the auth token is sent if present.
-        api.fetch(`/schematics/${id}/download${x && z ? `?x=${x}&z=${z}` : ''}`, {
-            // Need to specify we expect a blob, but our api wrapper assumes JSON.
-            // So we bypass the api wrapper for the download to handle the blob correctly.
-        }).catch(() => { }); // Dummy catch, actual logic below
-
         const headers = new Headers();
         if (token) headers.append('Authorization', `Bearer ${token}`);
 

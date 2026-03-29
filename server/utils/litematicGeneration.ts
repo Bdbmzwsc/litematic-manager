@@ -39,10 +39,6 @@ export function generateLitematic(
         }
         const regionForUnitNum = cloneRegion();
 
-        const [unitNumX, unitNumZ] = [
-            Math.max(1, Math.floor(((sub.position[0] as number) - (sub.position[0] as number)) / regionForUnitNum.getCompound('Size').getNumber('x'))),
-            Math.max(1, Math.floor(((sub.position[2] as number) - (sub.position[2] as number)) / regionForUnitNum.getCompound('Size').getNumber('z')))
-        ];
 
         // Recalculate based on original logic
         const posX = sub.position[0] as number;
@@ -50,10 +46,10 @@ export function generateLitematic(
         const sizeX = regionForUnitNum.getCompound('Size').getNumber('x');
         const sizeZ = regionForUnitNum.getCompound('Size').getNumber('z');
 
-        const actualUnitNumX = Math.max(1, Math.floor((x - posX) / sizeX));
-        const actualUnitNumZ = Math.max(1, Math.floor((z - posZ) / sizeZ));
 
-        console.log(actualUnitNumX, actualUnitNumZ);
+        const actualUnitNumX = Math.max(1, Math.floor(((x - posX) + 1) / sizeX)) + (sub.generation_count ?? 0);
+        const actualUnitNumZ = Math.max(1, Math.floor(((z - posZ) + 1) / sizeZ)) + (sub.generation_count ?? 0);
+
         switch (sub.generate_direct) {
             case "+z":
                 for (let j = 0; j < actualUnitNumZ; j++) {
