@@ -6,6 +6,11 @@
             "0",
             "0"
         ],
+        "end_position": [
+            "10",
+            "10",
+            "10"
+        ],
         "generate_direct": "+z"
     }
 ]

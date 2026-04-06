@@ -8,6 +8,7 @@ import pool from '../config/database.js';
 import type { Response } from 'express';
 import type { AuthenticatedRequest, SchematicRecord, SchematicConfig } from '../types/index.js';
 import type { RowDataPacket, ResultSetHeader } from 'mysql2';
+import { NbtFile } from 'deepslate';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -531,8 +532,12 @@ const schematicController = {
                     try {
                         const nbt = readNbtFile(sourcePath);
                         const configClone = JSON.parse(JSON.stringify(schematicConfig.config));
-                        const assembledNbt = generateLitematic(nbt, configClone, x, z);
-                        resultBuffer = Buffer.from(assembledNbt.write());
+                        const [assembledNbt, success] = generateLitematic(nbt, configClone, x, z);
+                        if (!success) {
+                            res.status(400).json({ error: '生成失败，请检查配置文件' });
+                            return;
+                        }
+                        resultBuffer = Buffer.from((assembledNbt as NbtFile).write());
                     } catch (error) {
                         console.error('生成失败:', error);
                         res.status(500).json({ error: '生成失败' });

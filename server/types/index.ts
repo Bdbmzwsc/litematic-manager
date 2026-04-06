@@ -1,9 +1,6 @@
 import type { Request } from 'express';
 import type { RowDataPacket } from 'mysql2';
 
-// ===== Common Types =====
-export type Integer = number & { __int?: never };
-
 // ===== User & Auth =====
 
 export interface User {
@@ -65,10 +62,10 @@ export interface SchematicRecord extends RowDataPacket {
 
 export interface SchematicConfigItem {
     name: string;
-    position: (string | number)[];
+    position: string[];
     generation?: boolean;
     generate_direct?: '+x' | '-x' | '+z' | '-z';
-    generation_count?: Integer;
+    end_position?: string[];
 }
 
 export interface SchematicConfig {

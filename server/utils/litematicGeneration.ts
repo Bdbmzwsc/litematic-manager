@@ -2,6 +2,7 @@ import { NbtFile, NbtInt } from 'deepslate';
 import { Parser } from 'expr-eval';
 import fs from 'fs';
 import type { SchematicConfigItem } from '../types/index.js';
+import e from 'express';
 
 const exprParser = new Parser();
 
@@ -10,98 +11,98 @@ export function readNbtFile(filePath: string): NbtFile {
     return NbtFile.read(new Uint8Array(buffer));
 }
 
+// 让这个函数返回俩个值
 export function generateLitematic(
     nbt: NbtFile,
     config: SchematicConfigItem[],
     x: number,
     z: number
-): NbtFile {
+): [NbtFile | null, boolean] {
     const originalBuffer = nbt.write();
 
     let i = 0;
     const regionKeys = Array.from(nbt.root.getCompound('Regions').keys());
 
-    config.forEach(sub => {
+    for (const sub of config) {
         const cloneRegion = () => {
             return NbtFile.read(originalBuffer).root.getCompound('Regions').getCompound(sub.name);
         };
-        sub.position = (sub.position as (string | number)[]).map((str) =>
+
+        const position = sub.position.map((str) =>
             exprParser.evaluate(String(str), { targetX: x, targetZ: z })
         );
+        let end_position: number[] | null = null;
+        if (sub.end_position) {
+            end_position = sub.end_position.map((str) =>
+                exprParser.evaluate(String(str), { targetX: x, targetZ: z })
+            );
+        }
+
         if (!sub.generation) {
             const a = cloneRegion();
-            a.getCompound('Position').set('x', new NbtInt(Number(sub.position[0])));
-            a.getCompound('Position').set('y', new NbtInt(Number(sub.position[1])));
-            a.getCompound('Position').set('z', new NbtInt(Number(sub.position[2])));
+            a.getCompound('Position').set('x', new NbtInt(Number(position[0])));
+            a.getCompound('Position').set('y', new NbtInt(Number(position[1])));
+            a.getCompound('Position').set('z', new NbtInt(Number(position[2])));
             nbt.root.getCompound('Regions').set(`${i.toString()}`, a);
             i++;
-            return;
+            continue;
         }
         const regionForUnitNum = cloneRegion();
 
 
         // Recalculate based on original logic
-        const posX = sub.position[0] as number;
-        const posZ = sub.position[2] as number;
+        const posX = position[0] as number;
+        const posZ = position[2] as number;
         const sizeX = regionForUnitNum.getCompound('Size').getNumber('x');
         const sizeZ = regionForUnitNum.getCompound('Size').getNumber('z');
 
 
-        const actualUnitNumX = Math.max(1, Math.floor(((x - posX) + 1) / sizeX)) + (sub.generation_count ?? 0);
-        const actualUnitNumZ = Math.max(1, Math.floor(((z - posZ) + 1) / sizeZ)) + (sub.generation_count ?? 0);
+        const actualUnitNumX = Math.max(1, Math.floor(((x - posX) + 1) / sizeX))
+        const actualUnitNumZ = Math.max(1, Math.floor(((z - posZ) + 1) / sizeZ));
 
-        switch (sub.generate_direct) {
-            case "+z":
-                for (let j = 0; j < actualUnitNumZ; j++) {
-                    const a = cloneRegion();
-                    a.getCompound('Position').set('x', new NbtInt(Number(sub.position[0])));
-                    a.getCompound('Position').set('y', new NbtInt(Number(sub.position[1])));
-                    a.getCompound('Position').set('z', new NbtInt(Number(sub.position[2])));
-                    nbt.root.getCompound('Regions').set(`${i.toString()}_${j.toString()}`, a);
-                    (sub.position[2] as number) += a.getCompound('Size').getNumber('z');
-                    i++;
-                }
-                break;
-            case "+x":
-                for (let j = 0; j < actualUnitNumX; j++) {
-                    const a = cloneRegion();
-                    a.getCompound('Position').set('x', new NbtInt(Number(sub.position[0])));
-                    a.getCompound('Position').set('y', new NbtInt(Number(sub.position[1])));
-                    a.getCompound('Position').set('z', new NbtInt(Number(sub.position[2])));
-                    nbt.root.getCompound('Regions').set(`${i.toString()}_${j.toString()}`, a);
-                    (sub.position[0] as number) += a.getCompound('Size').getNumber('x');
-                    i++;
-                }
-                break;
-            case "-z":
-                for (let j = 0; j < actualUnitNumZ; j++) {
-                    const a = cloneRegion();
-                    a.getCompound('Position').set('x', new NbtInt(Number(sub.position[0])));
-                    a.getCompound('Position').set('y', new NbtInt(Number(sub.position[1])));
-                    a.getCompound('Position').set('z', new NbtInt(Number(sub.position[2])));
-                    nbt.root.getCompound('Regions').set(`${i.toString()}_${j.toString()}`, a);
-                    (sub.position[2] as number) -= a.getCompound('Size').getNumber('z');
-                    i++;
-                }
-                break;
-            case "-x":
-                for (let j = 0; j < actualUnitNumX; j++) {
-                    const a = cloneRegion();
-                    a.getCompound('Position').set('x', new NbtInt(Number(sub.position[0])));
-                    a.getCompound('Position').set('y', new NbtInt(Number(sub.position[1])));
-                    a.getCompound('Position').set('z', new NbtInt(Number(sub.position[2])));
-                    nbt.root.getCompound('Regions').set(`${i.toString()}_${j.toString()}`, a);
-                    (sub.position[0] as number) -= a.getCompound('Size').getNumber('x');
-                    i++;
-                }
-                break;
+        const UnitCountNameMapping = {
+            'x': actualUnitNumX,
+            'z': actualUnitNumZ
         }
-    });
+        const positionIndexMapping = {
+            'x': 0,
+            'y': 1,
+            'z': 2
+        };
+
+        if (!sub.generate_direct)
+            return [null, false];
+
+        const axisDirection = sub.generate_direct[1] as 'x' | 'z';
+
+        for (let j = 0; j < UnitCountNameMapping[axisDirection]; j++) {
+            const isPositive: boolean = sub.generate_direct[0] === '+' ? true : false;
+            if (isPositive) {
+                if (end_position && position[positionIndexMapping[axisDirection]] > end_position[positionIndexMapping[axisDirection]])
+                    break;
+            }
+            else {
+                if (end_position && position[positionIndexMapping[axisDirection]] < end_position[positionIndexMapping[axisDirection]])
+                    break;
+            }
+
+            const a = cloneRegion();
+            a.getCompound('Position').set('x', new NbtInt(Number(position[0])));
+            a.getCompound('Position').set('y', new NbtInt(Number(position[1])));
+            a.getCompound('Position').set('z', new NbtInt(Number(position[2])));
+            nbt.root.getCompound('Regions').set(`${i.toString()}_${j.toString()}`, a);
+            if (isPositive)
+                position[positionIndexMapping[axisDirection]] += a.getCompound('Size').getNumber(axisDirection);
+            else
+                position[positionIndexMapping[axisDirection]] -= a.getCompound('Size').getNumber(axisDirection);
+            i++;
+        }
+    }
 
     // Clean up original region bases
     regionKeys.forEach(key => {
         nbt.root.getCompound('Regions').delete(key);
     });
 
-    return nbt;
+    return [nbt, true];
 }
