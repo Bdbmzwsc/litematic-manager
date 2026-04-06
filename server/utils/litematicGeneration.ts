@@ -38,7 +38,7 @@ export function generateLitematic(
             );
         }
 
-        if (!sub.generation) {
+        if (!sub.generation && sub.generation != null) {
             const a = cloneRegion();
             a.getCompound('Position').set('x', new NbtInt(Number(position[0])));
             a.getCompound('Position').set('y', new NbtInt(Number(position[1])));
