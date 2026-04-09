@@ -63,7 +63,7 @@ export interface SchematicRecord extends RowDataPacket {
 export interface SchematicConfigItem {
     name: string;
     position: string[];
-    generation?: boolean;
+    generation?: boolean; // Defaults to true
     generate_direct?: '+x' | '-x' | '+z' | '-z';
     end_position?: string[];
 }
