@@ -21,6 +21,7 @@ const ConfigModal: React.FC<ConfigModalProps> = ({ schematic, onClose, onUpdate,
     const [isReuploading, setIsReuploading] = useState(false);
     const [dragActive, setDragActive] = useState(false);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [isPinned, setIsPinned] = useState(schematic.is_pinned || false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
@@ -212,6 +213,38 @@ const ConfigModal: React.FC<ConfigModalProps> = ({ schematic, onClose, onUpdate,
                                 >
                                     {saving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
                                     保存配置
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Section 1.5: Display Settings */}
+                        <div className="glass-panel" style={{ padding: '1.25rem', background: 'rgba(255, 255, 255, 0.02)' }}>
+                            <h4 style={{ margin: '0 0 1rem 0', fontSize: '1rem', color: 'var(--text-primary)' }}>展示设置</h4>
+
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.9rem', color: 'var(--text-primary)' }}>优先展示</label>
+                                    <span style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>将此投影固定在主页列表的最前方</span>
+                                </div>
+                                <button
+                                    onClick={async () => {
+                                        try {
+                                            setSaving(true);
+                                            await api.schematics.togglePin(schematic.id, !isPinned);
+                                            setIsPinned(!isPinned);
+                                            showNotification(!isPinned ? '已置顶投影' : '已取消置顶', 'success');
+                                            if (onRefresh) onRefresh();
+                                        } catch(err) {
+                                            showNotification('修改置顶失败: ' + (err instanceof Error ? err.message : String(err)), 'error');
+                                        } finally {
+                                            setSaving(false);
+                                        }
+                                    }}
+                                    className={`glass-button ${isPinned ? 'success' : 'secondary'}`}
+                                    style={{ width: 'auto', padding: '0.5rem 1rem', background: isPinned ? 'var(--success)' : undefined }}
+                                    disabled={saving || isReuploading}
+                                >
+                                    {loading ? <Loader2 size={16} className="animate-spin" /> : (isPinned ? '取消置顶' : '置顶展示')}
                                 </button>
                             </div>
                         </div>

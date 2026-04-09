@@ -29,6 +29,7 @@ interface SchematicRow extends RowDataPacket {
     folder_name: string | null;
     user_id: number;
     is_public: boolean;
+    is_pinned: boolean;
 }
 
 class Schematic {

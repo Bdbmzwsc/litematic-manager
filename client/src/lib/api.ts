@@ -69,6 +69,12 @@ export const api = {
                 method: 'DELETE',
             });
         },
+        async togglePin(id: string | number, is_pinned: boolean) {
+            return api.fetch(`/schematics/${id}/pin`, {
+                method: 'PUT',
+                body: JSON.stringify({ is_pinned }),
+            });
+        },
         async upload(file: File, options: UploadOptions = {}) {
             const token = localStorage.getItem('jwt_token');
             const formData = new FormData();

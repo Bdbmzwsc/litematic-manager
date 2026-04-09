@@ -56,6 +56,7 @@ export interface SchematicRecord extends RowDataPacket {
     user_id: number;
     is_public: boolean;
     download_count: number;
+    is_pinned: boolean;
     created_at: string;
     creator_name?: string;
 }

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Download, Clock, User as UserIcon } from 'lucide-react';
+import { Download, Clock, User as UserIcon, Pin } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import type { Schematic } from '../../types';
 
@@ -24,7 +24,8 @@ const SchematicCard: React.FC<SchematicCardProps> = ({ schematic }) => {
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '1rem',
-                transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
+                transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                position: 'relative'
             }}
             onClick={() => navigate(`/schematic/${schematic.id}`)}
         >
@@ -35,9 +36,15 @@ const SchematicCard: React.FC<SchematicCardProps> = ({ schematic }) => {
                     color: 'var(--text-primary)',
                     margin: 0,
                     lineHeight: 1.3,
-                    wordBreak: 'break-word'
+                    wordBreak: 'break-word',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
                 }}>
-                    {schematic.name}
+                    {Boolean(schematic.is_pinned) && <Pin size={16} style={{ color: 'var(--text-primary)', fill: 'currentColor', flexShrink: 0 }} />}
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                        {schematic.name}
+                    </span>
                 </h3>
                 {schematic.is_public ? (
                     <span style={{

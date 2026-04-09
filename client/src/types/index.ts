@@ -15,6 +15,7 @@ export interface Schematic {
     creator_name: string;
     is_public: boolean;
     schematic_type: number;
+    is_pinned: boolean;
     download_count: number;
     created_at: string;
 }
