@@ -22,6 +22,8 @@ const ConfigModal: React.FC<ConfigModalProps> = ({ schematic, onClose, onUpdate,
     const [dragActive, setDragActive] = useState(false);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [isPinned, setIsPinned] = useState(schematic.is_pinned || false);
+    const [description, setDescription] = useState(schematic.description || '');
+    const [savingDesc, setSavingDesc] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
@@ -217,7 +219,44 @@ const ConfigModal: React.FC<ConfigModalProps> = ({ schematic, onClose, onUpdate,
                             </div>
                         </div>
 
-                        {/* Section 1.5: Display Settings */}
+                        {/* Section 1.5: Intro Settings */}
+                        <div className="glass-panel" style={{ padding: '1.25rem', background: 'rgba(255, 255, 255, 0.02)' }}>
+                            <h4 style={{ margin: '0 0 1rem 0', fontSize: '1rem', color: 'var(--text-primary)' }}>简介设置</h4>
+
+                            <div>
+                                <textarea
+                                    className="glass-input"
+                                    value={description}
+                                    onChange={e => setDescription(e.target.value)}
+                                    placeholder="输入简短的一句话介绍"
+                                    style={{ width: '100%', minHeight: '60px', padding: '0.5rem', resize: 'vertical' }}
+                                />
+                                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+                                    <button
+                                        className="glass-button"
+                                        onClick={async () => {
+                                            try {
+                                                setSavingDesc(true);
+                                                await api.schematics.update(schematic.id, { description });
+                                                showNotification('简介已更新', 'success');
+                                                if (onRefresh) onRefresh();
+                                            } catch(err) {
+                                                showNotification('修改简介失败: ' + (err instanceof Error ? err.message : String(err)), 'error');
+                                            } finally {
+                                                setSavingDesc(false);
+                                            }
+                                        }}
+                                        disabled={savingDesc || isReuploading}
+                                        style={{ width: 'auto', padding: '0.4rem 1rem', background: 'var(--success)' }}
+                                    >
+                                        {savingDesc ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+                                        保存简介
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Section 1.6: Display Settings */}
                         <div className="glass-panel" style={{ padding: '1.25rem', background: 'rgba(255, 255, 255, 0.02)' }}>
                             <h4 style={{ margin: '0 0 1rem 0', fontSize: '1rem', color: 'var(--text-primary)' }}>展示设置</h4>
 
@@ -230,7 +269,7 @@ const ConfigModal: React.FC<ConfigModalProps> = ({ schematic, onClose, onUpdate,
                                     onClick={async () => {
                                         try {
                                             setSaving(true);
-                                            await api.schematics.togglePin(schematic.id, !isPinned);
+                                            await api.schematics.update(schematic.id, { is_pinned: !isPinned });
                                             setIsPinned(!isPinned);
                                             showNotification(!isPinned ? '已置顶投影' : '已取消置顶', 'success');
                                             if (onRefresh) onRefresh();

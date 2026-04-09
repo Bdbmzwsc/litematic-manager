@@ -47,7 +47,6 @@ router.post('/upload', validateToken, upload.single('file'), schematicController
 router.put('/:id/upload', validateToken, upload.single('file'), schematicController.reuploadSchematic);
 router.delete('/:id', validateToken, schematicController.deleteSchematic);
 router.put('/:id', validateToken, schematicController.updateSchematic);
-router.put('/:id/pin', validateToken, schematicController.togglePin);
 
 // 可选登录的路由
 router.get('/search', optionalAuth, schematicController.searchSchematics);

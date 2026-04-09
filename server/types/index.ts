@@ -47,6 +47,7 @@ export interface CodeCheckResult {
 export interface SchematicRecord extends RowDataPacket {
     id: number;
     name: string;
+    description: string;
     file_path: string | null;
     top_view_path: string | null;
     side_view_path: string | null;

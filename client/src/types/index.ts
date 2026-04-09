@@ -11,6 +11,7 @@ export interface Schematic {
     id: number;
     name: string;
     description: string;
+    readme?: string;
     user_id: number;
     creator_name: string;
     is_public: boolean;

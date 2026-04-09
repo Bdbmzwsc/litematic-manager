@@ -65,8 +65,8 @@ const schematicController = {
 
             // Create README.md
             const readmePath = path.join(targetDir, 'README.md');
-            const description: string = req.body.description || '';
-            fs.writeFileSync(readmePath, description, 'utf8');
+            const readmeContent: string = req.body.readme || '';
+            fs.writeFileSync(readmePath, readmeContent, 'utf8');
             console.log(`Created README at: ${readmePath}`);
 
             // Create config.json
@@ -107,10 +107,12 @@ const schematicController = {
             }
 
             // Save to Database
+            const schematicDescription: string = req.body.description || '';
             const [result] = await pool.execute<ResultSetHeader>(
-                'INSERT INTO schematics (name, folder_name, user_id, is_public, materials) VALUES (?, ?, ?, ?, ?)',
+                'INSERT INTO schematics (name, description, folder_name, user_id, is_public, materials) VALUES (?, ?, ?, ?, ?, ?)',
                 [
                     schematicData.name,
+                    schematicDescription,
                     schematicData.folder_name,
                     schematicData.user_id,
                     schematicData.is_public,
@@ -243,14 +245,14 @@ const schematicController = {
                 try {
                     const readmeAbsolutePath = path.join(folderPath, 'README.md');
                     if (fs.existsSync(readmeAbsolutePath)) {
-                        const description = fs.readFileSync(readmeAbsolutePath, 'utf8');
-                        result.description = description;
+                        const readmeData = fs.readFileSync(readmeAbsolutePath, 'utf8');
+                        result.readme = readmeData;
                     } else {
-                        result.description = '';
+                        result.readme = '';
                     }
                 } catch (err) {
                     console.error('Error reading README:', err);
-                    result.description = '';
+                    result.readme = '';
                 }
 
             } else {
@@ -339,7 +341,7 @@ const schematicController = {
 
         try {
             const id = req.params.id as string;
-            const { name, is_public, description } = req.body;
+            const { name, is_public, description, is_pinned, readme } = req.body;
             const userId = req.user.id;
             const isAdmin = req.user.role === 'admin';
 
@@ -362,6 +364,8 @@ const schematicController = {
             const updateData: Record<string, unknown> = {};
             if (name !== undefined) updateData.name = name;
             if (is_public !== undefined) updateData.is_public = is_public;
+            if (description !== undefined) updateData.description = description;
+            if (is_pinned !== undefined) updateData.is_pinned = is_pinned;
 
             if (Object.keys(updateData).length > 0) {
                 await pool.query(
@@ -370,13 +374,13 @@ const schematicController = {
                 );
             }
 
-            if (description !== undefined && schematic.folder_name) {
+            if (readme !== undefined && schematic.folder_name) {
                 const readmePath = path.join(__dirname, '../uploads', schematic.folder_name, 'README.md');
                 const dir = path.dirname(readmePath);
                 if (!fs.existsSync(dir)) {
                     fs.mkdirSync(dir, { recursive: true });
                 }
-                fs.writeFileSync(readmePath, description, 'utf8');
+                fs.writeFileSync(readmePath, readme, 'utf8');
                 console.log(`Updated README for schematic ${id} at ${readmePath}`);
             }
 
@@ -663,58 +667,6 @@ const schematicController = {
         }
     },
 
-    async togglePin(req: AuthenticatedRequest, res: Response): Promise<void> {
-        if (!req.user) {
-            res.status(401).json({ error: '需要登录' });
-            return;
-        }
-
-        try {
-            const id = req.params.id as string;
-            const { is_pinned } = req.body;
-            const userId = req.user.id;
-            const isAdmin = req.user.role === 'admin';
-
-            if (typeof is_pinned !== 'boolean') {
-                res.status(400).json({ error: 'is_pinned 必须为布尔值' });
-                return;
-            }
-
-            const [schematics] = await pool.query<SchematicRecord[]>(
-                'SELECT * FROM schematics WHERE id = ?',
-                [id]
-            );
-
-            if (schematics.length === 0) {
-                res.status(404).json({ error: '原理图不存在' });
-                return;
-            }
-
-            const schematic = schematics[0];
-            if (schematic.user_id !== userId && !isAdmin) {
-                res.status(403).json({ error: '没有权限修改此原理图' });
-                return;
-            }
-
-            await pool.execute(
-                'UPDATE schematics SET is_pinned = ? WHERE id = ?',
-                [is_pinned, id]
-            );
-
-            const [updated] = await pool.query<SchematicRecord[]>(
-                `SELECT s.*, u.username as creator_name 
-                FROM schematics s 
-                JOIN users u ON s.user_id = u.id 
-                WHERE s.id = ?`,
-                [id]
-            );
-
-            res.json(updated[0]);
-        } catch (error) {
-            console.error('置顶操作失败:', error);
-            res.status(500).json({ error: '置顶操作失败' });
-        }
-    }
 };
 
 // 辅助方法：检查访问权限并提供文件

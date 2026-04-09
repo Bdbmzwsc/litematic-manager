@@ -62,15 +62,15 @@ const SchematicDetail: React.FC = () => {
     }, [id]);
 
     const handleEditStart = () => {
-        setEditContent(schematic?.description || '');
+        setEditContent(schematic?.readme || '');
         setIsEditing(true);
     };
 
     const handleEditSave = async () => {
         try {
             setSaving(true);
-            await api.schematics.update(id!, { description: editContent });
-            setSchematic(prev => prev ? { ...prev, description: editContent } : prev);
+            await api.schematics.update(id!, { readme: editContent });
+            setSchematic(prev => prev ? { ...prev, readme: editContent } : prev);
             setIsEditing(false);
         } catch (err) {
             console.error("Failed to save README", err);
@@ -234,24 +234,32 @@ const SchematicDetail: React.FC = () => {
             <Navbar />
 
             <main style={{ flex: 1, padding: '2rem', maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
-                {/* Back Button */}
-                <button
-                    onClick={() => navigate('/')}
-                    style={{
-                        background: 'transparent', border: 'none', color: 'var(--text-secondary)',
-                        display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer',
-                        marginBottom: '1.5rem', fontSize: '0.9rem', padding: 0, fontWeight: '500',
-                        transition: 'color 0.2s'
-                    }}
-                    onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-primary)')}
-                    onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
-                >
-                    <ChevronLeft size={16} />
-                    返回
-                </button>
+                {/* Top Navigation Bar */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                    <button
+                        onClick={() => navigate('/')}
+                        style={{
+                            background: 'transparent', border: 'none', color: 'var(--text-secondary)',
+                            display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer',
+                            fontSize: '0.9rem', padding: 0, fontWeight: '500',
+                            transition: 'color 0.2s'
+                        }}
+                        onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-primary)')}
+                        onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
+                    >
+                        <ChevronLeft size={16} />
+                        返回
+                    </button>
 
-                {/* PyPI Style Top Header */}
-                <div className="glass-panel animate-fade-in" style={{ padding: '2.5rem', marginBottom: '2rem', position: 'relative' }}>
+                </div>
+
+                {/* GitHub Style Split Layout */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem', alignItems: 'flex-start' }}>
+
+                    {/* Main Content (Left Column) */}
+                    <div style={{ flex: '1 1 600px', display: 'flex', flexDirection: 'column', gap: '2rem', minWidth: 0 }}>
+                        {/* Title Header Card */}
+                        <div className="glass-panel animate-fade-in" style={{ padding: '2.5rem', position: 'relative' }}>
 
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem', justifyContent: 'space-between', alignItems: 'flex-start' }}>
 
@@ -308,31 +316,17 @@ const SchematicDetail: React.FC = () => {
                                     </div>
                                 )}
                             </div>
+                            
+                            {!isEditingName && (
+                                <div style={{ color: 'var(--text-secondary)', fontSize: '1.1rem', marginTop: '-0.25rem', paddingLeft: '4.5rem', wordBreak: 'break-word', lineHeight: 1.5 }}>
+                                    {schematic.description || <span style={{ opacity: 0.6, fontStyle: 'italic' }}>暂无简介</span>}
+                                </div>
+                            )}
                         </div>
 
                         {/* Action Buttons */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', minWidth: '240px', justifyContent: 'flex-end', marginTop: '2.5rem' }}>
-                            <div style={{ position: 'absolute', top: '1.25rem', right: '1.25rem', display: 'flex', gap: '0.5rem' }}>
-                                <button
-                                    className="glass-button secondary hover-only"
-                                    onClick={handleShare}
-                                    style={{ padding: '0.5rem', width: 'auto' }}
-                                    title="分享投影链接"
-                                >
-                                    <Share2 size={18} />
-                                </button>
-                                {canEdit && (
-                                    <button
-                                        className="glass-button secondary hover-only"
-                                        onClick={() => setShowConfigModal(true)}
-                                        style={{ padding: '0.5rem', width: 'auto' }}
-                                        title="投影配置与管理"
-                                    >
-                                        <Settings size={18} />
-                                    </button>
-                                )}
-                            </div>
-                            <button className="glass-button" onClick={handleDownloadClick} style={{ padding: '1rem', fontSize: '1.05rem' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', minWidth: '240px', alignItems: 'flex-end', justifyContent: 'flex-end', paddingTop: '1rem' }}>
+                            <button className="glass-button" onClick={handleDownloadClick} style={{ padding: '1rem', fontSize: '1.05rem', width: '100%' }}>
                                 <Download size={20} />
                                 下载文件
                             </button>
@@ -341,15 +335,140 @@ const SchematicDetail: React.FC = () => {
                 </div>
 
 
-                {/* PyPI Style Split Layout */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
+                    {/* Project Description (README) Card */}
+                    <div className="glass-panel animate-fade-in" style={{ padding: '2rem', minHeight: '400px', display: 'flex', flexDirection: 'column' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid var(--glass-border)', paddingBottom: '1rem' }}>
+                                <h3 style={{ fontSize: '1.5rem', margin: 0 }}>
+                                    项目说明
+                                </h3>
+                                {canEdit && !isEditing && (
+                                    <button
+                                        onClick={handleEditStart}
+                                        className="glass-button secondary"
+                                        style={{ padding: '0.4rem 0.75rem', width: 'auto', fontSize: '0.85rem' }}
+                                    >
+                                        <Pencil size={14} />
+                                        编辑
+                                    </button>
+                                )}
+                            </div>
 
-                    {/* Left Column: Metadata */}
-                    <div style={{ gridColumn: 'span 1', display: 'flex', flexDirection: 'column', gap: '1.5rem' }} className="animate-fade-in">
-                        <div className="glass-panel" style={{ padding: '1.5rem' }}>
-                            <h3 style={{ fontSize: '1.1rem', borderBottom: '1px solid var(--glass-border)', paddingBottom: '0.75rem', marginBottom: '1.25rem' }}>
+                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                                {isEditing ? (
+                                    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, gap: '1rem' }}>
+                                        <textarea
+                                            className="glass-input"
+                                            value={editContent}
+                                            onChange={(e) => setEditContent(e.target.value)}
+                                            style={{
+                                                flex: 1,
+                                                minHeight: '350px',
+                                                resize: 'vertical',
+                                                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+                                                fontSize: '0.9rem',
+                                                lineHeight: 1.6,
+                                                padding: '1rem'
+                                            }}
+                                            placeholder="使用 Markdown 编写您的 README..."
+                                            disabled={saving}
+                                        />
+                                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                                            <button
+                                                className="glass-button secondary"
+                                                onClick={() => setIsEditing(false)}
+                                                style={{ width: 'auto', padding: '0.5rem 1rem' }}
+                                                disabled={saving}
+                                            >
+                                                <X size={16} />
+                                                取消
+                                            </button>
+                                            <button
+                                                className="glass-button"
+                                                onClick={handleEditSave}
+                                                style={{ width: 'auto', padding: '0.5rem 1.5rem', background: 'var(--success)' }}
+                                                disabled={saving}
+                                            >
+                                                {saving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+                                                保存更改
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="markdown-body" style={{ color: 'var(--text-secondary)', lineHeight: 1.7, fontSize: '0.95rem', overflow: 'hidden', maxWidth: '100%', wordBreak: 'break-word' }}>
+                                        {schematic.readme ? (
+                                            <ReactMarkdown
+                                                remarkPlugins={[remarkGfm]}
+                                                rehypePlugins={[
+                                                    rehypeRaw,
+                                                    [rehypeSanitize, {
+                                                        ...defaultSchema,
+                                                        tagNames: [...(defaultSchema.tagNames || []), 'video', 'source'],
+                                                        attributes: {
+                                                            ...defaultSchema.attributes,
+                                                            video: ['src', 'controls', 'width', 'height', 'autoPlay', 'loop', 'muted', 'poster', 'preload', 'style'],
+                                                            source: ['src', 'type']
+                                                        }
+                                                    }]
+                                                ]}
+                                                components={{
+                                                    img: ({ node, ...props }) => (
+                                                        <img {...props} style={{ maxWidth: '100%', height: 'auto', borderRadius: 'var(--radius-md)', margin: '1rem 0' }} />
+                                                    )
+                                                }}
+                                            >
+                                                {schematic.readme}
+                                            </ReactMarkdown>
+                                        ) : (
+                                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '3rem 0', color: 'var(--text-tertiary)' }}>
+                                                <FileBox size={48} style={{ opacity: 0.2, marginBottom: '1rem' }} />
+                                                <p>此投影没有 README 或说明。</p>
+                                                {canEdit && (
+                                                    <button
+                                                        onClick={handleEditStart}
+                                                        className="glass-button secondary mt-4"
+                                                        style={{ width: 'auto' }}
+                                                    >
+                                                        <Pencil size={16} />
+                                                        添加说明
+                                                    </button>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    
+                    </div> {/* end left col */}
+
+                {/* Sidebar (Right Column) */}
+                <div style={{ flex: '0 0 280px', display: 'flex', flexDirection: 'column', width: '100%' }} className="animate-fade-in">
+                    <div style={{ padding: '0 0.5rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--glass-border)', paddingBottom: '0.75rem', marginBottom: '1.25rem' }}>
+                            <h3 style={{ fontSize: '1.1rem', margin: 0 }}>
                                 投影信息
                             </h3>
+                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                <button
+                                    onClick={handleShare}
+                                    className="glass-button secondary hover-only"
+                                    style={{ padding: '0.4rem', width: 'auto', background: 'transparent' }}
+                                    title="分享链接"
+                                >
+                                    <Share2 size={16} />
+                                </button>
+                                {canEdit && (
+                                    <button
+                                        onClick={() => setShowConfigModal(true)}
+                                        className="glass-button secondary hover-only"
+                                        style={{ padding: '0.4rem', width: 'auto', background: 'transparent' }}
+                                        title="投影管理"
+                                    >
+                                        <Settings size={16} />
+                                    </button>
+                                )}
+                            </div>
+                        </div>
 
                             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                                 <li style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
@@ -441,111 +560,6 @@ const SchematicDetail: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Right Column: Project Description (README) */}
-                    <div style={{ gridColumn: 'span 2' }} className="animate-fade-in">
-                        <div className="glass-panel" style={{ padding: '2rem', minHeight: '400px', display: 'flex', flexDirection: 'column' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid var(--glass-border)', paddingBottom: '1rem' }}>
-                                <h3 style={{ fontSize: '1.5rem', margin: 0 }}>
-                                    项目说明
-                                </h3>
-                                {canEdit && !isEditing && (
-                                    <button
-                                        onClick={handleEditStart}
-                                        className="glass-button secondary"
-                                        style={{ padding: '0.4rem 0.75rem', width: 'auto', fontSize: '0.85rem' }}
-                                    >
-                                        <Pencil size={14} />
-                                        编辑
-                                    </button>
-                                )}
-                            </div>
-
-                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                                {isEditing ? (
-                                    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, gap: '1rem' }}>
-                                        <textarea
-                                            className="glass-input"
-                                            value={editContent}
-                                            onChange={(e) => setEditContent(e.target.value)}
-                                            style={{
-                                                flex: 1,
-                                                minHeight: '350px',
-                                                resize: 'vertical',
-                                                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-                                                fontSize: '0.9rem',
-                                                lineHeight: 1.6,
-                                                padding: '1rem'
-                                            }}
-                                            placeholder="使用 Markdown 编写您的 README..."
-                                            disabled={saving}
-                                        />
-                                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-                                            <button
-                                                className="glass-button secondary"
-                                                onClick={() => setIsEditing(false)}
-                                                style={{ width: 'auto', padding: '0.5rem 1rem' }}
-                                                disabled={saving}
-                                            >
-                                                <X size={16} />
-                                                取消
-                                            </button>
-                                            <button
-                                                className="glass-button"
-                                                onClick={handleEditSave}
-                                                style={{ width: 'auto', padding: '0.5rem 1.5rem', background: 'var(--success)' }}
-                                                disabled={saving}
-                                            >
-                                                {saving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
-                                                保存更改
-                                            </button>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="markdown-body" style={{ color: 'var(--text-secondary)', lineHeight: 1.7, fontSize: '0.95rem', overflow: 'hidden', maxWidth: '100%', wordBreak: 'break-word' }}>
-                                        {schematic.description ? (
-                                            <ReactMarkdown
-                                                remarkPlugins={[remarkGfm]}
-                                                rehypePlugins={[
-                                                    rehypeRaw,
-                                                    [rehypeSanitize, {
-                                                        ...defaultSchema,
-                                                        tagNames: [...(defaultSchema.tagNames || []), 'video', 'source'],
-                                                        attributes: {
-                                                            ...defaultSchema.attributes,
-                                                            video: ['src', 'controls', 'width', 'height', 'autoPlay', 'loop', 'muted', 'poster', 'preload', 'style'],
-                                                            source: ['src', 'type']
-                                                        }
-                                                    }]
-                                                ]}
-                                                components={{
-                                                    img: ({ node, ...props }) => (
-                                                        <img {...props} style={{ maxWidth: '100%', height: 'auto', borderRadius: 'var(--radius-md)', margin: '1rem 0' }} />
-                                                    )
-                                                }}
-                                            >
-                                                {schematic.description}
-                                            </ReactMarkdown>
-                                        ) : (
-                                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '3rem 0', color: 'var(--text-tertiary)' }}>
-                                                <FileBox size={48} style={{ opacity: 0.2, marginBottom: '1rem' }} />
-                                                <p>此投影没有 README 或说明。</p>
-                                                {canEdit && (
-                                                    <button
-                                                        onClick={handleEditStart}
-                                                        className="glass-button secondary mt-4"
-                                                        style={{ width: 'auto' }}
-                                                    >
-                                                        <Pencil size={16} />
-                                                        添加说明
-                                                    </button>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
 
                 </div>
             </main >
