@@ -64,6 +64,12 @@ export const api = {
                 body: JSON.stringify(data),
             });
         },
+        async togglePin(id: string | number, is_pinned: boolean) {
+            return api.fetch(`/schematics/${id}/pin`, {
+                method: 'PUT',
+                body: JSON.stringify({ is_pinned }),
+            });
+        },
         async delete(id: string | number) {
             return api.fetch(`/schematics/${id}`, {
                 method: 'DELETE',

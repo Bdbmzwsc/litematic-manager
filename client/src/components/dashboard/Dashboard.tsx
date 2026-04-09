@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { Search, SlidersHorizontal, Loader2, Inbox } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../../lib/api';
+import { useNotification } from '../../contexts/NotificationContext';
 import Navbar from '../layout/Navbar';
 import SchematicCard from './SchematicCard';
 import type { Schematic, User } from '../../types';
@@ -11,6 +13,7 @@ const Dashboard: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [filter, setFilter] = useState<'all' | 'my'>('all');
+    const { showNotification } = useNotification();
 
     const token = localStorage.getItem('jwt_token');
     const user: User | null = token ? JSON.parse(localStorage.getItem('user') || '{}') : null;
@@ -40,6 +43,27 @@ const Dashboard: React.FC = () => {
     const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         fetchSchematics(searchQuery);
+    };
+
+    const handleTogglePin = async (schematicId: number, currentPinStatus: boolean) => {
+        try {
+            await api.schematics.togglePin(schematicId, !currentPinStatus);
+            // Optimistically update the list and re-sort
+            setSchematics(prev => {
+                const updated = prev.map(s => s.id === schematicId ? { ...s, is_pinned: !currentPinStatus } : s);
+                // Re-sort: pinned items first (descending), then by created_at (descending)
+                return updated.sort((a, b) => {
+                    if (a.is_pinned !== b.is_pinned) {
+                        return a.is_pinned ? -1 : 1;
+                    }
+                    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+                });
+            });
+            showNotification(!currentPinStatus ? '已置顶投影' : '已取消置顶', 'success');
+        } catch (error) {
+            console.error('Toggle pin failed:', error);
+            showNotification('操作失败，请重试', 'error');
+        }
     };
 
     const filteredSchematics = schematics.filter(s => {
@@ -161,15 +185,32 @@ const Dashboard: React.FC = () => {
                         <Loader2 size={32} className="animate-spin" />
                     </div>
                 ) : filteredSchematics.length > 0 ? (
-                    <div style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-                        gap: '1.5rem'
-                    }}>
-                        {filteredSchematics.map(schematic => (
-                            <SchematicCard key={schematic.id} schematic={schematic} />
-                        ))}
-                    </div>
+                    <motion.div 
+                        layout
+                        style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+                            gap: '1.5rem'
+                        }}
+                    >
+                        <AnimatePresence mode="popLayout">
+                            {filteredSchematics.map(schematic => (
+                                <motion.div
+                                    key={schematic.id}
+                                    layout
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: 10, transition: { duration: 0.2 } }}
+                                    transition={{ layout: { duration: 0.35, type: 'spring', bounce: 0.2 }, opacity: { duration: 0.4 }, y: { duration: 0.4, ease: [0.16, 1, 0.3, 1] } }}
+                                >
+                                    <SchematicCard 
+                                        schematic={schematic} 
+                                        onTogglePin={handleTogglePin}
+                                    />
+                                </motion.div>
+                            ))}
+                        </AnimatePresence>
+                    </motion.div>
                 ) : (
                     <div className="glass-panel" style={{
                         display: 'flex', flexDirection: 'column', alignItems: 'center',

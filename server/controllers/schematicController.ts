@@ -365,7 +365,6 @@ const schematicController = {
             if (name !== undefined) updateData.name = name;
             if (is_public !== undefined) updateData.is_public = is_public;
             if (description !== undefined) updateData.description = description;
-            if (is_pinned !== undefined) updateData.is_pinned = is_pinned;
 
             if (Object.keys(updateData).length > 0) {
                 await pool.query(
@@ -396,6 +395,54 @@ const schematicController = {
         } catch (error) {
             console.error('更新失败:', error);
             res.status(500).json({ error: '更新失败' });
+        }
+    },
+
+    async togglePinSchematic(req: AuthenticatedRequest, res: Response): Promise<void> {
+        if (!req.user) {
+            res.status(401).json({ error: '需要登录' });
+            return;
+        }
+
+        try {
+            const id = req.params.id as string;
+            const { is_pinned } = req.body;
+            const isAdmin = req.user.role === 'admin';
+
+            if (!isAdmin) {
+                res.status(403).json({ error: '没有权限执行此操作' });
+                return;
+            }
+
+            const [schematics] = await pool.query<SchematicRecord[]>(
+                'SELECT * FROM schematics WHERE id = ?',
+                [id]
+            );
+
+            if (schematics.length === 0) {
+                res.status(404).json({ error: '原理图不存在' });
+                return;
+            }
+
+            if (is_pinned !== undefined) {
+                await pool.query(
+                    'UPDATE schematics SET is_pinned = ? WHERE id = ?',
+                    [is_pinned, id]
+                );
+            }
+
+            const [updatedSchematic] = await pool.query<SchematicRecord[]>(
+                `SELECT s.*, u.username as creator_name 
+                FROM schematics s 
+                JOIN users u ON s.user_id = u.id 
+                WHERE s.id = ?`,
+                [id]
+            );
+
+            res.json(updatedSchematic[0]);
+        } catch (error) {
+            console.error('修改置顶失败:', error);
+            res.status(500).json({ error: '修改置顶失败' });
         }
     },
 

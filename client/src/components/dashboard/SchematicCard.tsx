@@ -5,10 +5,17 @@ import type { Schematic } from '../../types';
 
 interface SchematicCardProps {
     schematic: Schematic;
+    onTogglePin?: (id: number, currentPinStatus: boolean) => Promise<void>;
 }
 
-const SchematicCard: React.FC<SchematicCardProps> = ({ schematic }) => {
+const SchematicCard: React.FC<SchematicCardProps> = ({ schematic, onTogglePin }) => {
     const navigate = useNavigate();
+    const [isHovering, setIsHovering] = React.useState(false);
+    
+    // Check if current user is admin
+    const currentUserStr = localStorage.getItem('user');
+    const currentUser = currentUserStr ? JSON.parse(currentUserStr) : null;
+    const isAdmin = currentUser?.role === 'admin';
 
     // Format date beautifully
     const formattedDate = new Intl.DateTimeFormat('zh-CN', {
@@ -31,6 +38,8 @@ const SchematicCard: React.FC<SchematicCardProps> = ({ schematic }) => {
                 overflow: 'hidden'
             }}
             onClick={() => navigate(`/schematic/${schematic.id}`)}
+            onMouseEnter={() => setIsHovering(true)}
+            onMouseLeave={() => setIsHovering(false)}
         >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <h3 style={{
@@ -47,7 +56,41 @@ const SchematicCard: React.FC<SchematicCardProps> = ({ schematic }) => {
                     minWidth: 0,
                     paddingRight: '0.5rem'
                 }}>
-                    {Boolean(schematic.is_pinned) && <Pin size={16} style={{ color: 'var(--text-primary)', fill: 'currentColor', flexShrink: 0 }} />}
+                    {Boolean(schematic.is_pinned) ? (
+                        <Pin 
+                            size={16} 
+                            style={{ 
+                                color: 'var(--text-primary)', 
+                                fill: 'currentColor', 
+                                flexShrink: 0,
+                                cursor: isAdmin ? 'pointer' : 'inherit',
+                                opacity: 1,
+                                transition: 'all 0.2s'
+                            }} 
+                            onClick={(e) => {
+                                if (!isAdmin || !onTogglePin) return;
+                                e.stopPropagation();
+                                onTogglePin(schematic.id, true);
+                            }}
+                        />
+                    ) : (isAdmin && isHovering) ? (
+                        <Pin 
+                            size={16} 
+                            style={{ 
+                                color: 'var(--text-primary)', 
+                                flexShrink: 0, 
+                                opacity: 0.4,
+                                cursor: 'pointer',
+                                transition: 'opacity 0.2s'
+                            }} 
+                            onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
+                            onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.4')}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                if (onTogglePin) onTogglePin(schematic.id, false);
+                            }}
+                        />
+                    ) : null}
                     <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
                         {schematic.name}
                     </span>

@@ -46,6 +46,7 @@ const router = express.Router();
 router.post('/upload', validateToken, upload.single('file'), schematicController.uploadSchematic);
 router.put('/:id/upload', validateToken, upload.single('file'), schematicController.reuploadSchematic);
 router.delete('/:id', validateToken, schematicController.deleteSchematic);
+router.put('/:id/pin', validateToken, schematicController.togglePinSchematic);
 router.put('/:id', validateToken, schematicController.updateSchematic);
 
 // 可选登录的路由
