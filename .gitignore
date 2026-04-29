@@ -2,3 +2,4 @@ node_modules
 server/uploads/*
 .env
 TESTAPI/downloads/*
+.gemini

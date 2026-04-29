@@ -46,21 +46,12 @@
     DB_PASSWORD=123456
     DB_NAME=litematic
 
-    # 服务器配置
     PORT=3001
-    RENDER_SERVER_URL=http://localhost:3000
 
     # JWE配置
     JWT_SECRET=YOUR_JWE_SECRET
     JWT_EXPIRES_IN=24h
     JWT_ISSUSER=ISSUSER
-
-    # 文件上传配置
-    UPLOAD_DIR=./uploads
-    MAX_FILE_SIZE=10485760  # 10MB
-
-    # 跨域配置
-    CORS_ORIGIN=http://localhost:3000
     ```
 *   **启动后端服务**:
     *   开发模式 (自动重启):

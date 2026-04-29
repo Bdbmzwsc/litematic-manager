@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Layers, LogOut, LogIn, Upload, Key, User, Moon, Sun } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import type { User as UserType } from '../../types';
@@ -14,11 +14,35 @@ const Navbar: React.FC = () => {
         () => document.documentElement.classList.contains('light-theme') ? 'light' : 'dark'
     );
 
+    useEffect(() => {
+        const mediaQuery = window.matchMedia('(prefers-color-scheme: light)');
+        const handleChange = (e: MediaQueryListEvent) => {
+            // Only auto-switch if user hasn't manually set a preference
+            if (!localStorage.getItem('theme')) {
+                const newTheme = e.matches ? 'light' : 'dark';
+                setTheme(newTheme);
+                if (newTheme === 'light') {
+                    document.documentElement.classList.add('light-theme');
+                } else {
+                    document.documentElement.classList.remove('light-theme');
+                }
+            }
+        };
+        
+        // Use modern addEventListener
+        mediaQuery.addEventListener('change', handleChange);
+        return () => mediaQuery.removeEventListener('change', handleChange);
+    }, []);
+
     const toggleTheme = () => {
         const newTheme = theme === 'dark' ? 'light' : 'dark';
         setTheme(newTheme);
-        // Toggle class on body or html tag for CSS variables later if needed
-        document.documentElement.classList.toggle('light-theme');
+        if (newTheme === 'light') {
+            document.documentElement.classList.add('light-theme');
+        } else {
+            document.documentElement.classList.remove('light-theme');
+        }
+        localStorage.setItem('theme', newTheme);
     };
 
     const handleLogout = () => {
