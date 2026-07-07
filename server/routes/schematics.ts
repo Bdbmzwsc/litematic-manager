@@ -45,6 +45,7 @@ const router = express.Router();
 // 需要登录的路由
 router.post('/upload', validateToken, upload.single('file'), schematicController.uploadSchematic);
 router.put('/:id/upload', validateToken, upload.single('file'), schematicController.reuploadSchematic);
+router.get('/:id/versions', optionalAuth, schematicController.getSchematicVersions);
 router.delete('/:id', validateToken, schematicController.deleteSchematic);
 router.put('/:id/pin', validateToken, schematicController.togglePinSchematic);
 router.put('/:id', validateToken, schematicController.updateSchematic);
@@ -60,5 +61,6 @@ router.get('/:id/materials', optionalAuth, schematicController.getMaterials);
 router.get('/:id/config', validateToken, schematicController.getConfig);
 router.put('/:id/config', validateToken, schematicController.updateConfig);
 router.get('/:id/download', downloadLimiter, optionalAuth, schematicController.downloadSchematic);
+router.get('/versions/:versionId/download', downloadLimiter, optionalAuth, schematicController.downloadSchematicVersion);
 
 export default router;

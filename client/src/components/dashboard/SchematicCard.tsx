@@ -6,9 +6,11 @@ import type { Schematic } from '../../types';
 interface SchematicCardProps {
     schematic: Schematic;
     onTogglePin?: (id: number, currentPinStatus: boolean) => Promise<void>;
+    onTagClick?: (tag: string) => void;
+    onAuthorClick?: (author: string) => void;
 }
 
-const SchematicCard: React.FC<SchematicCardProps> = ({ schematic, onTogglePin }) => {
+const SchematicCard: React.FC<SchematicCardProps> = ({ schematic, onTogglePin, onTagClick, onAuthorClick }) => {
     const navigate = useNavigate();
     const [isHovering, setIsHovering] = React.useState(false);
     
@@ -119,23 +121,76 @@ const SchematicCard: React.FC<SchematicCardProps> = ({ schematic, onTogglePin })
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
                 display: '-webkit-box',
-                WebkitLineClamp: 4,
+                WebkitLineClamp: 3,
                 WebkitBoxOrient: 'vertical',
                 color: 'var(--text-secondary)',
                 fontSize: '0.9rem',
                 lineHeight: 1.5,
-                wordBreak: 'break-word'
+                wordBreak: 'break-word',
+                marginBottom: '0.5rem'
             }}>
                 {schematic.description || <span style={{ opacity: 0.5, fontStyle: 'italic' }}>暂无简介</span>}
             </div>
 
+            {/* Tags area */}
+            {schematic.tags && (() => {
+                let tagsArr: string[] = [];
+                try {
+                    tagsArr = typeof schematic.tags === 'string' ? JSON.parse(schematic.tags) : schematic.tags;
+                } catch (e) {
+                    // ignore
+                }
+                if (tagsArr && tagsArr.length > 0) {
+                    return (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: 'auto' }}>
+                            {tagsArr.slice(0, 3).map(tag => (
+                                <span 
+                                    key={tag} 
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onTagClick && onTagClick(tag);
+                                    }}
+                                    style={{
+                                        background: 'var(--glass-highlight)', padding: '0.15rem 0.4rem',
+                                        borderRadius: 'var(--radius-sm)', fontSize: '0.75rem',
+                                        color: 'var(--text-primary)', cursor: onTagClick ? 'pointer' : 'default',
+                                        border: '1px solid var(--glass-border)'
+                                    }}
+                                >
+                                    {tag}
+                                </span>
+                            ))}
+                            {tagsArr.length > 3 && (
+                                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center' }}>
+                                    +{tagsArr.length - 3}
+                                </span>
+                            )}
+                        </div>
+                    );
+                }
+                return null;
+            })()}
+
             <div style={{
                 display: 'flex', flexWrap: 'wrap', gap: '1rem',
-                marginTop: 'auto', paddingTop: '1rem',
+                paddingTop: '1rem', marginTop: '0.5rem',
                 borderTop: '1px solid var(--glass-border)',
                 color: 'var(--text-secondary)', fontSize: '0.8rem'
             }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', maxWidth: '30%' }}>
+                <div 
+                    onClick={(e) => {
+                        if (onAuthorClick) {
+                            e.stopPropagation();
+                            onAuthorClick(schematic.creator_name);
+                        }
+                    }}
+                    style={{ 
+                        display: 'flex', alignItems: 'center', gap: '0.4rem', maxWidth: '30%', 
+                        cursor: onAuthorClick ? 'pointer' : 'default' 
+                    }}
+                    onMouseEnter={(e) => onAuthorClick && (e.currentTarget.style.color = 'var(--text-primary)')}
+                    onMouseLeave={(e) => onAuthorClick && (e.currentTarget.style.color = 'var(--text-secondary)')}
+                >
                     <UserIcon size={14} style={{ flexShrink: 0 }} />
                     <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {schematic.creator_name}

@@ -8,6 +8,8 @@ import SchematicDetail from './components/schematic/SchematicDetail';
 import UploadPage from './components/upload/UploadPage';
 import { Layers } from 'lucide-react';
 
+import AuthorProfile from './components/profile/AuthorProfile';
+
 import { NotificationProvider } from './contexts/NotificationContext';
 import { ConfirmProvider } from './contexts/ConfirmContext';
 
@@ -62,6 +64,7 @@ function App() {
                         <Route path="/upload" element={<UploadPage />} />
                         <Route path="/admin/invitations" element={<InvitationManager />} />
                         <Route path="/schematic/:id" element={<SchematicDetail />} />
+                        <Route path="/user/:username" element={<AuthorProfile />} />
                     </Routes>
                 </BrowserRouter>
             </NotificationProvider>

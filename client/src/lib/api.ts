@@ -31,7 +31,7 @@ export const api = {
 
     auth: {
         async login(username: string, password: string) {
-            return api.fetch<{ token: string; user: { id: number; username: string; email: string; role: string } }>('/auth/login', {
+            return api.fetch<{ token: string; user: { id: number; username: string; email: string; role: string; avatar_url?: string; bio?: string } }>('/auth/login', {
                 method: 'POST',
                 body: JSON.stringify({ username, password }),
             });
@@ -43,7 +43,36 @@ export const api = {
             });
         },
         async getCurrentUser() {
-            return api.fetch('/auth/me');
+            return api.fetch<{ id: number; username: string; email: string; role: string; avatar_url?: string; bio?: string }>('/auth/me');
+        },
+        async updateProfile(data: { bio: string }) {
+            return api.fetch<{ message: string; bio: string }>('/auth/profile', {
+                method: 'PUT',
+                body: JSON.stringify(data),
+            });
+        },
+        async uploadAvatar(file: File) {
+            const token = localStorage.getItem('jwt_token');
+            const formData = new FormData();
+            formData.append('avatar', file);
+            
+            const response = await fetch(`${API_BASE}/auth/avatar`, {
+                method: 'POST',
+                headers: {
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+                },
+                body: formData,
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || response.statusText || 'Upload failed');
+            }
+
+            return response.json() as Promise<{ message: string; avatar_url: string }>;
+        },
+        async getPublicProfile(username: string) {
+            return api.fetch<{ id: number; username: string; role: string; avatar_url?: string; bio?: string; created_at: string }>(`/auth/users/${encodeURIComponent(username)}`);
         }
     },
 
@@ -51,9 +80,10 @@ export const api = {
         async getAll() {
             return api.fetch('/schematics');
         },
-        async search(query: string) {
-            if (!query) return this.getAll();
-            return api.fetch(`/schematics/search?q=${encodeURIComponent(query)}`);
+        async search(query: string, tag?: string) {
+            let url = `/schematics/search?q=${encodeURIComponent(query)}`;
+            if (tag) url += `&tag=${encodeURIComponent(tag)}`;
+            return api.fetch(url);
         },
         async getById(id: string | number) {
             return api.fetch(`/schematics/${id}`);
@@ -89,6 +119,9 @@ export const api = {
             if (options.config !== undefined) {
                 formData.append('config', typeof options.config === 'string' ? options.config : JSON.stringify(options.config));
             }
+            if (options.tags !== undefined) {
+                formData.append('tags', JSON.stringify(options.tags));
+            }
 
             const response = await fetch(`${API_BASE}/schematics/upload`, {
                 method: 'POST',
@@ -105,10 +138,15 @@ export const api = {
 
             return response.json();
         },
-        async reupload(id: string | number, file: File) {
+        async getVersions(id: string | number) {
+            return api.fetch<import('../types').SchematicVersion[]>(`/schematics/${id}/versions`);
+        },
+        async reupload(id: string | number, file: File, options?: { version_name?: string; changelog?: string }) {
             const token = localStorage.getItem('jwt_token');
             const formData = new FormData();
             formData.append('file', file);
+            if (options?.version_name) formData.append('version_name', options.version_name);
+            if (options?.changelog) formData.append('changelog', options.changelog);
 
             const response = await fetch(`${API_BASE}/schematics/${id}/upload`, {
                 method: 'PUT',

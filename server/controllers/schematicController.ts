@@ -108,15 +108,25 @@ const schematicController = {
 
             // Save to Database
             const schematicDescription: string = req.body.description || '';
+            let tagsArray = [];
+            try {
+                if (req.body.tags) {
+                    tagsArray = typeof req.body.tags === 'string' ? JSON.parse(req.body.tags) : req.body.tags;
+                }
+            } catch (e) {
+                console.error('解析 tags 失败:', e);
+            }
+
             const [result] = await pool.execute<ResultSetHeader>(
-                'INSERT INTO schematics (name, description, folder_name, user_id, is_public, materials) VALUES (?, ?, ?, ?, ?, ?)',
+                'INSERT INTO schematics (name, description, folder_name, user_id, is_public, materials, tags) VALUES (?, ?, ?, ?, ?, ?, ?)',
                 [
                     schematicData.name,
                     schematicDescription,
                     schematicData.folder_name,
                     schematicData.user_id,
                     schematicData.is_public,
-                    '{}'
+                    '{}',
+                    JSON.stringify(tagsArray)
                 ]
             );
 
@@ -140,32 +150,30 @@ const schematicController = {
     async searchSchematics(req: AuthenticatedRequest, res: Response): Promise<void> {
         try {
             const searchTerm = (req.query.q as string) || '';
+            const tagFilter = (req.query.tag as string) || '';
             const userId = req.user?.id;
             const isAdmin = req.user?.role === 'admin';
 
-            let query: string;
-            let params: (string | number)[];
+            let query = `
+                SELECT s.*, u.username as creator_name 
+                FROM schematics s 
+                JOIN users u ON s.user_id = u.id 
+                WHERE (s.name LIKE ? OR u.username LIKE ?)
+            `;
+            const params: (string | number)[] = [`%${searchTerm}%`, `%${searchTerm}%`];
 
-            if (isAdmin) {
-                query = `
-                    SELECT s.*, u.username as creator_name 
-                    FROM schematics s 
-                    JOIN users u ON s.user_id = u.id 
-                    WHERE s.name LIKE ? 
-                    ORDER BY s.is_pinned DESC, s.created_at DESC
-                `;
-                params = [`%${searchTerm}%`];
-            } else {
-                query = `
-                    SELECT s.*, u.username as creator_name 
-                    FROM schematics s 
-                    JOIN users u ON s.user_id = u.id 
-                    WHERE s.name LIKE ? 
-                    AND (s.is_public = true OR s.user_id = ?)
-                    ORDER BY s.is_pinned DESC, s.created_at DESC
-                `;
-                params = [`%${searchTerm}%`, userId || 0];
+            if (!isAdmin) {
+                query += ` AND (s.is_public = true OR s.user_id = ?)`;
+                params.push(userId || 0);
             }
+
+            if (tagFilter) {
+                // Using JSON_CONTAINS to check if the tag exists in the JSON array
+                query += ` AND JSON_CONTAINS(s.tags, ?)`;
+                params.push(`"${tagFilter}"`);
+            }
+
+            query += ` ORDER BY s.is_pinned DESC, s.created_at DESC`;
 
             const [schematics] = await pool.query<SchematicRecord[]>(query, params);
 
@@ -365,6 +373,15 @@ const schematicController = {
             if (name !== undefined) updateData.name = name;
             if (is_public !== undefined) updateData.is_public = is_public;
             if (description !== undefined) updateData.description = description;
+            
+            if (req.body.tags !== undefined) {
+                try {
+                    const tagsArray = typeof req.body.tags === 'string' ? JSON.parse(req.body.tags) : req.body.tags;
+                    updateData.tags = JSON.stringify(tagsArray);
+                } catch (e) {
+                    console.error('解析 tags 失败:', e);
+                }
+            }
 
             if (Object.keys(updateData).length > 0) {
                 await pool.query(
@@ -490,21 +507,53 @@ const schematicController = {
                 return;
             }
 
-            const folderPath = path.join(__dirname, '../uploads', schematic.folder_name);
-            const sourcePath = path.join(folderPath, 'source.litematic');
+            const versionName = req.body.version_name || '新版本';
+            const changelog = req.body.changelog || '';
 
-            // 替换源文件
+            // 1. Back up current version to schematic_versions
+            await pool.execute(
+                'INSERT INTO schematic_versions (schematic_id, version_name, folder_name, changelog) VALUES (?, ?, ?, ?)',
+                [id, versionName, schematic.folder_name, changelog]
+            );
+
+            // 2. Create new folder for the new version
+            const newTimestamp = Date.now().toString();
+            const uploadBaseDir = path.join(__dirname, '../uploads');
+            const targetDir = path.join(uploadBaseDir, newTimestamp);
+
+            if (!fs.existsSync(targetDir)) {
+                fs.mkdirSync(targetDir, { recursive: true });
+            }
+
+            const sourcePath = path.join(targetDir, 'source.litematic');
             fs.renameSync(file.path, sourcePath);
-            console.log(`投影文件已替换: ${sourcePath}`);
+            console.log(`新投影文件已保存至: ${sourcePath}`);
 
-            // 重新处理（生成视图和材料）
+            // 3. Copy existing config.json and README.md if they exist
+            const oldFolderPath = path.join(uploadBaseDir, schematic.folder_name);
+            const oldConfigPath = path.join(oldFolderPath, 'config.json');
+            if (fs.existsSync(oldConfigPath)) {
+                fs.copyFileSync(oldConfigPath, path.join(targetDir, 'config.json'));
+            }
+            const oldReadmePath = path.join(oldFolderPath, 'README.md');
+            if (fs.existsSync(oldReadmePath)) {
+                fs.copyFileSync(oldReadmePath, path.join(targetDir, 'README.md'));
+            }
+
+            // 4. Process new file to generate views
             try {
-                console.log('重新处理投影视图和材料...');
-                await processLitematicFile(sourcePath, folderPath);
+                console.log('处理新投影视图和材料...');
+                await processLitematicFile(sourcePath, targetDir);
                 console.log('重新处理完成');
             } catch (error) {
                 console.error('重新处理视图失败:', error);
             }
+
+            // 5. Update main schematic record with new folder_name
+            await pool.execute(
+                'UPDATE schematics SET folder_name = ? WHERE id = ?',
+                [newTimestamp, id]
+            );
 
             // 返回更新后的信息
             const [updated] = await pool.query<SchematicRecord[]>(
@@ -520,7 +569,81 @@ const schematicController = {
         }
     },
 
-    async getFrontView(req: AuthenticatedRequest, res: Response): Promise<void> {
+    async getSchematicVersions(req: AuthenticatedRequest, res: Response): Promise<void> {
+        try {
+            const id = req.params.id as string;
+            // Get all versions for the schematic ordered by newest first
+            const [versions] = await pool.query<RowDataPacket[]>(
+                'SELECT id, schematic_id, version_name, folder_name, changelog, created_at FROM schematic_versions WHERE schematic_id = ? ORDER BY created_at DESC',
+                [id]
+            );
+            res.json(versions);
+        } catch (error) {
+            console.error('获取版本历史失败:', error);
+            res.status(500).json({ error: '获取版本历史失败' });
+        }
+    },
+
+    async downloadSchematicVersion(req: AuthenticatedRequest, res: Response): Promise<void> {
+        try {
+            const versionId = req.params.versionId as string;
+            const [versions] = await pool.query<RowDataPacket[]>(
+                'SELECT * FROM schematic_versions WHERE id = ?',
+                [versionId]
+            );
+            
+            if (versions.length === 0) {
+                res.status(404).json({ error: '找不到该版本' });
+                return;
+            }
+
+            const version = versions[0];
+            const [schematics] = await pool.query<RowDataPacket[]>(
+                'SELECT * FROM schematics WHERE id = ?',
+                [version.schematic_id]
+            );
+
+            if (schematics.length === 0) {
+                res.status(404).json({ error: '对应的原理图不存在' });
+                return;
+            }
+            
+            const schematic = schematics[0];
+            
+            // Check auth (only needed if private)
+            if (!schematic.is_public) {
+                const userId = req.user?.id;
+                const isAdmin = req.user?.role === 'admin';
+                if (!userId || (schematic.user_id !== userId && !isAdmin)) {
+                    res.status(403).json({ error: '没有权限下载此文件' });
+                    return;
+                }
+            }
+
+            const folderPath = path.join(__dirname, '../uploads', version.folder_name);
+            const sourcePath = path.join(folderPath, 'source.litematic');
+
+            if (!fs.existsSync(sourcePath)) {
+                res.status(404).json({ error: '源文件不存在' });
+                return;
+            }
+
+            const filename = `${schematic.name}_${version.version_name}.litematic`;
+            const containsNonAscii = /[^\x00-\x7F]/.test(filename);
+            const encodedFilename = containsNonAscii
+                ? `filename*=UTF-8''${encodeURIComponent(filename)}`
+                : `filename="${filename}"`;
+
+            res.setHeader('Content-Disposition', `attachment; ${encodedFilename}`);
+            res.setHeader('Content-Type', 'application/octet-stream');
+            
+            const fileStream = fs.createReadStream(sourcePath);
+            fileStream.pipe(res);
+        } catch (error) {
+            console.error('下载历史版本失败:', error);
+            res.status(500).json({ error: '下载失败' });
+        }
+    },
         await checkAccessAndServeFile(req, res, 'front_view_path');
     },
 
