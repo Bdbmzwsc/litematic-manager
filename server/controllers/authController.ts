@@ -102,7 +102,7 @@ const authController = {
     async getCurrentUser(req: AuthenticatedRequest, res: Response): Promise<void> {
         try {
             const [users] = await pool.query<RowDataPacket[]>(
-                'SELECT id, username, email, role FROM users WHERE id = ?',
+                'SELECT id, username, email, role, avatar_url, bio FROM users WHERE id = ?',
                 [req.user!.id]
             );
 
@@ -150,6 +150,58 @@ const authController = {
         } catch (error) {
             console.error('修改密码失败:', error);
             res.status(500).json({ error: '修改密码失败' });
+        }
+    },
+
+    async updateProfile(req: AuthenticatedRequest, res: Response): Promise<void> {
+        const { bio } = req.body;
+        try {
+            await pool.query(
+                'UPDATE users SET bio = ? WHERE id = ?',
+                [bio, req.user!.id]
+            );
+            res.json({ message: '个人资料更新成功', bio });
+        } catch (error) {
+            console.error('更新资料失败:', error);
+            res.status(500).json({ error: '更新资料失败' });
+        }
+    },
+
+    async uploadAvatar(req: AuthenticatedRequest, res: Response): Promise<void> {
+        try {
+            if (!req.file) {
+                res.status(400).json({ error: '未提供文件' });
+                return;
+            }
+            const avatarUrl = `/uploads/avatars/${req.file.filename}`;
+            await pool.query(
+                'UPDATE users SET avatar_url = ? WHERE id = ?',
+                [avatarUrl, req.user!.id]
+            );
+            res.json({ message: '头像上传成功', avatar_url: avatarUrl });
+        } catch (error) {
+            console.error('头像上传失败:', error);
+            res.status(500).json({ error: '头像上传失败' });
+        }
+    },
+
+    async getPublicProfile(req: AuthenticatedRequest, res: Response): Promise<void> {
+        try {
+            const username = req.params.username;
+            const [users] = await pool.query<RowDataPacket[]>(
+                'SELECT id, username, role, avatar_url, bio, created_at FROM users WHERE username = ?',
+                [username]
+            );
+
+            if (users.length === 0) {
+                res.status(404).json({ error: '用户不存在' });
+                return;
+            }
+
+            res.json(users[0]);
+        } catch (error) {
+            console.error('获取用户公开资料失败:', error);
+            res.status(500).json({ error: '获取用户公开资料失败' });
         }
     }
 };

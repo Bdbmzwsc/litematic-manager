@@ -5,6 +5,8 @@ export interface User {
     username: string;
     email: string;
     role: 'admin' | 'user';
+    avatar_url?: string;
+    bio?: string;
 }
 
 export interface Schematic {
@@ -18,6 +20,16 @@ export interface Schematic {
     schematic_type: number;
     is_pinned: boolean;
     download_count: number;
+    created_at: string;
+    tags?: string[] | string;
+}
+
+export interface SchematicVersion {
+    id: number;
+    schematic_id: number;
+    version_name: string;
+    folder_name: string;
+    changelog: string;
     created_at: string;
 }
 
@@ -49,4 +61,7 @@ export interface UploadOptions {
     description?: string;
     type?: number;
     config?: unknown[] | string;
+    tags?: string[];
+    version_name?: string;
+    changelog?: string;
 }

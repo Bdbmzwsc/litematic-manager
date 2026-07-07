@@ -17,6 +17,23 @@ const UploadPage: React.FC = () => {
     const [description, setDescription] = useState('');
     const [type, setType] = useState('0'); // '0' or '1'
     const [configStr, setConfigStr] = useState('[\n  {\n    "name": "region_name",\n    "position": ["0", "0", "0"],\n    "generate_direct": "+x"\n  }\n]');
+    const [tags, setTags] = useState<string[]>([]);
+    const [tagInput, setTagInput] = useState('');
+
+    const handleAddTag = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const newTag = tagInput.trim();
+            if (newTag && !tags.includes(newTag)) {
+                setTags([...tags, newTag]);
+            }
+            setTagInput('');
+        }
+    };
+
+    const handleRemoveTag = (tagToRemove: string) => {
+        setTags(tags.filter(tag => tag !== tagToRemove));
+    };
 
     const handleDrag = (e: React.DragEvent<HTMLDivElement>) => {
         e.preventDefault();
@@ -74,7 +91,8 @@ const UploadPage: React.FC = () => {
             const result = await api.schematics.upload(file, {
                 description,
                 type: parseInt(type),
-                config: parsedConfig
+                config: parsedConfig,
+                tags
             }) as { name?: string; id?: number };
             setUploadResult({
                 success: true,
@@ -97,6 +115,8 @@ const UploadPage: React.FC = () => {
         setUploadResult(null);
         setDescription('');
         setType('0');
+        setTags([]);
+        setTagInput('');
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
@@ -203,6 +223,35 @@ const UploadPage: React.FC = () => {
                                         value={description}
                                         onChange={e => setDescription(e.target.value)}
                                         style={{ width: '100%', minHeight: '120px', resize: 'vertical', padding: '0.75rem', fontSize: '0.9rem' }}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', fontWeight: '500' }}>
+                                        标签 (Tags)
+                                    </label>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                                        {tags.map(tag => (
+                                            <span key={tag} style={{
+                                                background: 'var(--glass-highlight)', padding: '0.2rem 0.5rem',
+                                                borderRadius: 'var(--radius-sm)', fontSize: '0.85rem',
+                                                display: 'flex', alignItems: 'center', gap: '0.25rem'
+                                            }}>
+                                                {tag}
+                                                <button type="button" onClick={() => handleRemoveTag(tag)} style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', padding: 0 }}>
+                                                    <X size={14} />
+                                                </button>
+                                            </span>
+                                        ))}
+                                    </div>
+                                    <input
+                                        type="text"
+                                        className="glass-input"
+                                        placeholder="输入标签后按回车添加..."
+                                        value={tagInput}
+                                        onChange={e => setTagInput(e.target.value)}
+                                        onKeyDown={handleAddTag}
+                                        style={{ width: '100%' }}
                                     />
                                 </div>
 

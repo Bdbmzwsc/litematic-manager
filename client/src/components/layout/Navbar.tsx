@@ -1,13 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { Layers, LogOut, LogIn, Upload, Key, User, Moon, Sun } from 'lucide-react';
+import { Layers, LogOut, LogIn, Upload, Key, User as UserIcon, Moon, Sun, Settings } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import type { User as UserType } from '../../types';
+import ProfileSettings from '../auth/ProfileSettings';
 
 const Navbar: React.FC = () => {
     const navigate = useNavigate();
     const token = localStorage.getItem('jwt_token');
-    const user: UserType | null = token ? JSON.parse(localStorage.getItem('user') || '{}') : null;
+    const [user, setUser] = useState<UserType | null>(() => {
+        const storedUser = localStorage.getItem('user');
+        return storedUser ? JSON.parse(storedUser) : null;
+    });
     const isGuest = !token && sessionStorage.getItem('guest_mode') === 'true';
+    const [isProfileOpen, setIsProfileOpen] = useState(false);
 
     // Initialize theme from DOM state (in case of re-render)
     const [theme, setTheme] = useState<'dark' | 'light'>(
@@ -121,13 +126,22 @@ const Navbar: React.FC = () => {
                                     {user.role === 'admin' ? 'ADMIN' : 'USER'}
                                 </div>
                             </div>
-                            <div style={{
-                                width: '36px', height: '36px', borderRadius: '50%',
-                                background: 'var(--glass-bg)', border: '1px solid var(--glass-border)',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-primary)'
-                            }}>
-                                <User size={18} />
-                            </div>
+                            <button
+                                onClick={() => setIsProfileOpen(true)}
+                                style={{
+                                    width: '36px', height: '36px', borderRadius: '50%',
+                                    background: 'var(--glass-bg)', border: '1px solid var(--glass-border)',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-primary)',
+                                    cursor: 'pointer', overflow: 'hidden', padding: 0
+                                }}
+                                title="个人设置"
+                            >
+                                {user.avatar_url ? (
+                                    <img src={user.avatar_url} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                ) : (
+                                    <UserIcon size={18} />
+                                )}
+                            </button>
                             <button
                                 onClick={handleLogout}
                                 style={{
@@ -157,6 +171,18 @@ const Navbar: React.FC = () => {
                     </div>
                 )}
             </div>
+            
+            {user && (
+                <ProfileSettings
+                    user={user}
+                    isOpen={isProfileOpen}
+                    onClose={() => setIsProfileOpen(false)}
+                    onUpdate={(updatedUser) => {
+                        setUser(updatedUser);
+                        localStorage.setItem('user', JSON.stringify(updatedUser));
+                    }}
+                />
+            )}
         </nav>
     );
 };

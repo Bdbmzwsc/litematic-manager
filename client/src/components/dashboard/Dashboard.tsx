@@ -9,10 +9,12 @@ import SchematicCard from './SchematicCard';
 import type { Schematic, User } from '../../types';
 
 const Dashboard: React.FC = () => {
+    const navigate = useNavigate();
     const [schematics, setSchematics] = useState<Schematic[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [filter, setFilter] = useState<'all' | 'my'>('all');
+    const [activeTag, setActiveTag] = useState<string>('');
     const { showNotification } = useNotification();
 
     const token = localStorage.getItem('jwt_token');
@@ -28,10 +30,10 @@ const Dashboard: React.FC = () => {
         fetchSchematics();
     }, []);
 
-    const fetchSchematics = async (query: string = '') => {
+    const fetchSchematics = async (query: string = '', tag: string = '') => {
         setLoading(true);
         try {
-            const data = await api.schematics.search(query) as Schematic[];
+            const data = await api.schematics.search(query, tag) as Schematic[];
             setSchematics(data);
         } catch (error) {
             console.error('Failed to fetch schematics:', error);
@@ -42,7 +44,17 @@ const Dashboard: React.FC = () => {
 
     const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        fetchSchematics(searchQuery);
+        fetchSchematics(searchQuery, activeTag);
+    };
+
+    const handleTagClick = (tag: string) => {
+        const newTag = tag === activeTag ? '' : tag;
+        setActiveTag(newTag);
+        fetchSchematics(searchQuery, newTag);
+    };
+
+    const handleAuthorClick = (authorName: string) => {
+        navigate(`/user/${authorName}`);
     };
 
     const handleTogglePin = async (schematicId: number, currentPinStatus: boolean) => {
@@ -114,7 +126,7 @@ const Dashboard: React.FC = () => {
                             <input
                                 type="text"
                                 className="glass-input"
-                                placeholder="搜索名称..."
+                                placeholder="搜索投影或作者..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 style={{ paddingRight: '3rem', borderRadius: 'var(--radius-lg)' }}
@@ -140,6 +152,26 @@ const Dashboard: React.FC = () => {
                             padding: '0.25rem',
                             gap: '0.25rem'
                         }}>
+                            {activeTag && (
+                                <button
+                                    onClick={() => handleTagClick(activeTag)}
+                                    style={{
+                                        padding: '0.5rem 1.25rem',
+                                        borderRadius: 'calc(var(--radius-lg) - 4px)',
+                                        border: '1px solid var(--glass-highlight)',
+                                        background: 'var(--glass-highlight)',
+                                        color: 'var(--text-primary)',
+                                        fontWeight: '500',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s',
+                                        fontSize: '0.9rem',
+                                        display: 'flex', alignItems: 'center', gap: '0.4rem'
+                                    }}
+                                >
+                                    标签: {activeTag}
+                                    <span style={{ fontSize: '1rem', marginLeft: '0.2rem' }}>&times;</span>
+                                </button>
+                            )}
                             <button
                                 onClick={() => setFilter('all')}
                                 style={{
@@ -206,6 +238,8 @@ const Dashboard: React.FC = () => {
                                     <SchematicCard 
                                         schematic={schematic} 
                                         onTogglePin={handleTogglePin}
+                                        onTagClick={handleTagClick}
+                                        onAuthorClick={handleAuthorClick}
                                     />
                                 </motion.div>
                             ))}
